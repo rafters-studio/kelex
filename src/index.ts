@@ -50,3 +50,22 @@ export type {
 
 // Schema writer functions
 export { emitField, writeSchema } from "./schema-writer";
+
+// Target types
+export type {
+  CodegenTarget,
+  CompositeOptions,
+  ReactTanStackOptions,
+  TargetOptions,
+  TargetOutputFile,
+  TargetResult,
+} from "./targets";
+
+// Target functions and built-in targets
+export {
+  compositeTarget,
+  listTargets,
+  reactTanStackTarget,
+  registerTarget,
+  resolveTarget,
+} from "./targets";

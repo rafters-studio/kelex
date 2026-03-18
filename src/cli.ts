@@ -5,12 +5,13 @@ import * as path from "node:path";
 import { pathToFileURL } from "node:url";
 import { Command } from "commander";
 import { generate } from "./codegen/generator";
+import { listTargets, resolveTarget } from "./targets/registry";
 
 const program = new Command();
 
 program
   .name("kelex")
-  .description("Generate React forms from Zod schemas")
+  .description("Generate forms from Zod schemas")
   .version("0.0.1");
 
 program
@@ -23,6 +24,7 @@ program
     "--ui <path>",
     "UI component import path (generates built-in primitives if omitted)",
   )
+  .option("-t, --target <name>", "Code generation target", "react-tanstack")
   .action(async (schemaPath: string, options: GenerateCommandOptions) => {
     try {
       await runGenerate(schemaPath, options);
@@ -33,6 +35,20 @@ program
     }
   });
 
+program
+  .command("targets")
+  .description("List available code generation targets")
+  .action(() => {
+    const targets = listTargets();
+    console.log("Available targets:\n");
+    for (const t of targets) {
+      console.log(`  ${t.name}`);
+      console.log(`    ${t.description}`);
+      console.log(`    Default extension: ${t.defaultExtension}`);
+      console.log();
+    }
+  });
+
 program.parse();
 
 interface GenerateCommandOptions {
@@ -40,6 +56,7 @@ interface GenerateCommandOptions {
   name?: string;
   schema: string;
   ui?: string;
+  target: string;
 }
 
 async function runGenerate(
@@ -53,6 +70,9 @@ async function runGenerate(
   if (!fs.existsSync(absoluteSchemaPath)) {
     throw new Error(`Schema file not found: ${absoluteSchemaPath}`);
   }
+
+  // Resolve target
+  const target = resolveTarget(options.target);
 
   // Dynamically import the schema file
   const schemaUrl = pathToFileURL(absoluteSchemaPath).href;
@@ -76,7 +96,8 @@ async function runGenerate(
   }
 
   // Determine output path
-  const outputPath = options.output ?? deriveOutputPath(schemaPath);
+  const outputPath =
+    options.output ?? deriveOutputPath(schemaPath, target.defaultExtension);
   const absoluteOutputPath = path.resolve(outputPath);
 
   // Determine form name
@@ -94,32 +115,30 @@ async function runGenerate(
     formName,
     schemaImportPath,
     schemaExportName,
+    target,
     ...(options.ui ? { uiImportPath: options.ui } : {}),
   });
 
-  // Write output file
+  // Write all output files
   const outputDir = path.dirname(absoluteOutputPath);
   if (!fs.existsSync(outputDir)) {
     fs.mkdirSync(outputDir, { recursive: true });
   }
-  fs.writeFileSync(absoluteOutputPath, result.code, "utf-8");
 
-  // Write primitives file if generated
-  if (result.primitives) {
-    const primitivesPath = path.join(outputDir, "primitives.tsx");
-    fs.writeFileSync(primitivesPath, result.primitives, "utf-8");
-    console.log(`\u2713 Generated ${primitivesPath}`);
+  for (const file of result.files) {
+    const filePath = path.join(outputDir, file.filename);
+    fs.writeFileSync(filePath, file.content, "utf-8");
+    console.log(`\u2713 Generated ${filePath}`);
   }
 
-  // Print success message
-  console.log(`\u2713 Generated ${absoluteOutputPath}`);
+  // Print field count
   console.log(`  ${result.fields.length} fields: ${result.fields.join(", ")}`);
 
   // Print warnings if any
   if (result.warnings.length > 0) {
     console.log("\nWarnings:");
     for (const warning of result.warnings) {
-      console.log(`  ⚠ ${warning}`);
+      console.log(`  \u26A0 ${warning}`);
     }
   }
 }
@@ -128,7 +147,10 @@ async function runGenerate(
  * Derives output path from schema path.
  * ./user-schema.ts -> ./user-form.tsx
  */
-function deriveOutputPath(schemaPath: string): string {
+function deriveOutputPath(
+  schemaPath: string,
+  defaultExtension: string,
+): string {
   const dir = path.dirname(schemaPath);
   const base = path.basename(schemaPath, path.extname(schemaPath));
 
@@ -136,7 +158,7 @@ function deriveOutputPath(schemaPath: string): string {
   const formBase = base.replace(/-schema$/i, "").replace(/schema$/i, "");
 
   const finalBase = formBase || base;
-  return path.join(dir, `${finalBase}-form.tsx`);
+  return path.join(dir, `${finalBase}-form${defaultExtension}`);
 }
 
 /**

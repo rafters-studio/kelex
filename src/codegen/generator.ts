@@ -1,8 +1,12 @@
 import type { $ZodType } from "zod/v4/core";
 import { introspect } from "../introspection";
-import type { ComponentConfig } from "../mapping";
-import { resolveField } from "../mapping";
-import { generateFormFile, generatePrimitivesFile } from "./templates";
+import { reactTanStackTarget } from "../targets/react-tanstack";
+import type { ReactTanStackOptions } from "../targets/react-tanstack/types";
+import type {
+  CodegenTarget,
+  TargetOptions,
+  TargetOutputFile,
+} from "../targets/types";
 
 export interface GenerateOptions {
   /** The Zod schema to generate from */
@@ -19,17 +23,26 @@ export interface GenerateOptions {
 
   /** UI component import path. When omitted, generates built-in primitives. */
   uiImportPath?: string;
+
+  /** Code generation target. Defaults to react-tanstack. */
+  target?: CodegenTarget;
+
+  /** Target-specific options passed to target.generate() */
+  targetOptions?: TargetOptions;
 }
 
 export interface GenerateResult {
-  /** The generated form component code */
-  code: string;
+  /** Generated output files */
+  files: TargetOutputFile[];
 
   /** List of fields that were processed */
   fields: string[];
 
   /** Any warnings (e.g., unsupported features skipped) */
   warnings: string[];
+
+  /** The generated form component code (first file content, for backwards compat) */
+  code: string;
 
   /** Generated primitive components file (present when no custom uiImportPath) */
   primitives?: string;
@@ -40,11 +53,7 @@ export interface GenerateResult {
  */
 export function generate(options: GenerateOptions): GenerateResult {
   const { schema, formName, schemaImportPath, schemaExportName } = options;
-  const useBuiltinPrimitives = options.uiImportPath === undefined;
-  const uiImportPath = options.uiImportPath ?? "./primitives";
-
-  const processedFields: string[] = [];
-  const fieldConfigs = new Map<string, ComponentConfig>();
+  const target = options.target ?? reactTanStackTarget;
 
   // 1. Introspect schema -> FormDescriptor
   const formDescriptor = introspect(schema, {
@@ -54,32 +63,51 @@ export function generate(options: GenerateOptions): GenerateResult {
   });
 
   // Collect warnings from introspection
-  const warnings = [...formDescriptor.warnings];
+  const introspectionWarnings = [...formDescriptor.warnings];
 
-  // 2. For each field, resolve -> ComponentConfig
-  for (const field of formDescriptor.fields) {
-    try {
-      const config = resolveField(field);
-      fieldConfigs.set(field.name, config);
-      processedFields.push(field.name);
-    } catch (error) {
-      // Add warning and skip field
-      const message = error instanceof Error ? error.message : "Unknown error";
-      warnings.push(`Field "${field.name}": ${message}`);
-    }
-  }
+  // 2. Build target options
+  const targetOptions = buildTargetOptions(target, options);
 
-  // 3. Generate form wrapper with all fields
-  const code = generateFormFile({
-    form: formDescriptor,
-    fieldConfigs,
-    uiImportPath,
-  });
+  // 3. Run target
+  const targetResult = target.generate(formDescriptor, targetOptions);
+
+  // Merge warnings
+  const warnings = [...introspectionWarnings, ...targetResult.warnings];
+
+  // Use fields reported by the target (respects failed resolutions)
+  const fields = targetResult.fields;
+
+  // Backwards-compat: extract code and primitives from files
+  const primaryFile = targetResult.files[0];
+  const primitivesFile = targetResult.files.find(
+    (f) => f.filename === "primitives.tsx",
+  );
 
   return {
-    code,
-    fields: processedFields,
+    files: targetResult.files,
+    fields,
     warnings,
-    ...(useBuiltinPrimitives ? { primitives: generatePrimitivesFile() } : {}),
+    code: primaryFile?.content ?? "",
+    ...(primitivesFile ? { primitives: primitivesFile.content } : {}),
   };
+}
+
+function buildTargetOptions(
+  target: CodegenTarget,
+  options: GenerateOptions,
+): TargetOptions {
+  if (options.targetOptions) {
+    return options.targetOptions;
+  }
+
+  // Backwards compat: map legacy uiImportPath to react-tanstack options
+  if (target === reactTanStackTarget) {
+    const rtOpts: ReactTanStackOptions = {};
+    if (options.uiImportPath !== undefined) {
+      rtOpts.uiImportPath = options.uiImportPath;
+    }
+    return rtOpts;
+  }
+
+  return {};
 }

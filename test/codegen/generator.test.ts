@@ -1,7 +1,7 @@
 import { describe, expect, it, vi } from "vitest";
 import { z } from "zod/v4";
 import { generate } from "../../src/codegen/generator";
-import * as mapping from "../../src/mapping";
+import * as resolver from "../../src/mapping/resolver";
 
 describe("generate", () => {
   describe("basic functionality", () => {
@@ -318,8 +318,8 @@ describe("generate", () => {
         broken: z.string(),
       });
 
-      const originalResolveField = mapping.resolveField;
-      vi.spyOn(mapping, "resolveField").mockImplementation((field) => {
+      const originalResolveField = resolver.resolveField;
+      vi.spyOn(resolver, "resolveField").mockImplementation((field) => {
         if (field.name === "broken") {
           throw new Error("Unsupported field type");
         }
