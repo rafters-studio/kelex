@@ -55,40 +55,25 @@ export function generate(options: GenerateOptions): GenerateResult {
   const { schema, formName, schemaImportPath, schemaExportName } = options;
   const target = options.target ?? reactTanStackTarget;
 
-  // 1. Introspect schema -> FormDescriptor
   const formDescriptor = introspect(schema, {
     formName,
     schemaImportPath,
     schemaExportName,
   });
 
-  // Collect warnings from introspection
-  const introspectionWarnings = [...formDescriptor.warnings];
-
-  // 2. Build target options
   const targetOptions = buildTargetOptions(target, options);
-
-  // 3. Run target
   const targetResult = target.generate(formDescriptor, targetOptions);
 
-  // Merge warnings
-  const warnings = [...introspectionWarnings, ...targetResult.warnings];
-
-  // Use fields reported by the target (respects failed resolutions)
-  const fields = targetResult.fields;
-
-  // Backwards-compat: extract code and primitives from files
-  const primaryFile = targetResult.files[0];
   const primitivesFile = targetResult.files.find(
     (f) => f.filename === "primitives.tsx",
   );
 
   return {
     files: targetResult.files,
-    fields,
-    warnings,
-    code: primaryFile?.content ?? "",
-    ...(primitivesFile ? { primitives: primitivesFile.content } : {}),
+    fields: targetResult.fields,
+    warnings: [...formDescriptor.warnings, ...targetResult.warnings],
+    code: targetResult.files[0]?.content ?? "",
+    primitives: primitivesFile?.content,
   };
 }
 
@@ -100,13 +85,10 @@ function buildTargetOptions(
     return options.targetOptions;
   }
 
-  // Backwards compat: map legacy uiImportPath to react-tanstack options
-  if (target === reactTanStackTarget) {
-    const rtOpts: ReactTanStackOptions = {};
-    if (options.uiImportPath !== undefined) {
-      rtOpts.uiImportPath = options.uiImportPath;
-    }
-    return rtOpts;
+  if (target === reactTanStackTarget && options.uiImportPath !== undefined) {
+    return {
+      uiImportPath: options.uiImportPath,
+    } satisfies ReactTanStackOptions;
   }
 
   return {};

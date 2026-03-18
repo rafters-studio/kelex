@@ -7,6 +7,14 @@ import { Command } from "commander";
 import { generate } from "./codegen/generator";
 import { listTargets, resolveTarget } from "./targets/registry";
 
+interface GenerateCommandOptions {
+  output?: string;
+  name?: string;
+  schema: string;
+  ui?: string;
+  target: string;
+}
+
 const program = new Command();
 
 program
@@ -51,34 +59,21 @@ program
 
 program.parse();
 
-interface GenerateCommandOptions {
-  output?: string;
-  name?: string;
-  schema: string;
-  ui?: string;
-  target: string;
-}
-
 async function runGenerate(
   schemaPath: string,
   options: GenerateCommandOptions,
 ): Promise<void> {
-  // Resolve schema path
   const absoluteSchemaPath = path.resolve(schemaPath);
 
-  // Check if file exists
   if (!fs.existsSync(absoluteSchemaPath)) {
     throw new Error(`Schema file not found: ${absoluteSchemaPath}`);
   }
 
-  // Resolve target
   const target = resolveTarget(options.target);
 
-  // Dynamically import the schema file
   const schemaUrl = pathToFileURL(absoluteSchemaPath).href;
   const schemaModule = await import(schemaUrl);
 
-  // Get the schema export
   const schemaExportName = options.schema;
   const schema = schemaModule[schemaExportName] ?? schemaModule.default;
 
@@ -88,28 +83,21 @@ async function runGenerate(
     );
   }
 
-  // Validate it's a Zod schema
   if (!schema._zod) {
     throw new Error(
       `Export "${schemaExportName}" is not a Zod schema. Ensure you are using zod >= 4.0.0`,
     );
   }
 
-  // Determine output path
   const outputPath =
     options.output ?? deriveOutputPath(schemaPath, target.defaultExtension);
   const absoluteOutputPath = path.resolve(outputPath);
-
-  // Determine form name
   const formName = options.name ?? deriveFormName(schemaExportName);
-
-  // Calculate relative import path from output to schema
   const schemaImportPath = calculateImportPath(
     absoluteOutputPath,
     absoluteSchemaPath,
   );
 
-  // Generate the form
   const result = generate({
     schema,
     formName,
@@ -119,7 +107,6 @@ async function runGenerate(
     ...(options.ui ? { uiImportPath: options.ui } : {}),
   });
 
-  // Write all output files
   const outputDir = path.dirname(absoluteOutputPath);
   if (!fs.existsSync(outputDir)) {
     fs.mkdirSync(outputDir, { recursive: true });
@@ -131,10 +118,8 @@ async function runGenerate(
     console.log(`\u2713 Generated ${filePath}`);
   }
 
-  // Print field count
   console.log(`  ${result.fields.length} fields: ${result.fields.join(", ")}`);
 
-  // Print warnings if any
   if (result.warnings.length > 0) {
     console.log("\nWarnings:");
     for (const warning of result.warnings) {
@@ -153,10 +138,7 @@ function deriveOutputPath(
 ): string {
   const dir = path.dirname(schemaPath);
   const base = path.basename(schemaPath, path.extname(schemaPath));
-
-  // Replace -schema or Schema suffix with -form
   const formBase = base.replace(/-schema$/i, "").replace(/schema$/i, "");
-
   const finalBase = formBase || base;
   return path.join(dir, `${finalBase}-form${defaultExtension}`);
 }
@@ -180,11 +162,8 @@ function deriveFormName(schemaExportName: string): string {
 function calculateImportPath(outputPath: string, schemaPath: string): string {
   const outputDir = path.dirname(outputPath);
   let relativePath = path.relative(outputDir, schemaPath);
-
-  // Remove .ts/.tsx extension
   relativePath = relativePath.replace(/\.(ts|tsx)$/, "");
 
-  // Ensure it starts with ./
   if (!relativePath.startsWith(".") && !relativePath.startsWith("/")) {
     relativePath = `./${relativePath}`;
   }
