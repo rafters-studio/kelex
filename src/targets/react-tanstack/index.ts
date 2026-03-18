@@ -41,16 +41,18 @@ export const reactTanStackTarget: CodegenTarget<ReactTanStackOptions> = {
       uiImportPath,
     });
 
-    const files: TargetOutputFile[] = [
-      { filename: `${form.name}.tsx`, content: code },
-    ];
+    const primaryFile: TargetOutputFile = {
+      filename: `${form.name}.tsx`,
+      content: code,
+    };
 
-    if (useBuiltinPrimitives) {
-      files.push({
-        filename: "primitives.tsx",
-        content: generatePrimitivesFile(),
-      });
-    }
+    const files: [TargetOutputFile, ...TargetOutputFile[]] =
+      useBuiltinPrimitives
+        ? [
+            primaryFile,
+            { filename: "primitives.tsx", content: generatePrimitivesFile() },
+          ]
+        : [primaryFile];
 
     return { files, fields: processedFields, warnings };
   },

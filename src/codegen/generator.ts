@@ -21,7 +21,7 @@ export interface GenerateOptions {
   /** Exported name of the schema */
   schemaExportName: string;
 
-  /** UI component import path. When omitted, generates built-in primitives. */
+  /** UI component import path. Only applies to targets that support it (e.g. react-tanstack). */
   uiImportPath?: string;
 
   /** Code generation target. Defaults to react-tanstack. */
@@ -41,10 +41,10 @@ export interface GenerateResult {
   /** Any warnings (e.g., unsupported features skipped) */
   warnings: string[];
 
-  /** The generated form component code (first file content, for backwards compat) */
+  /** First file's content. Prefer files[] for new code. Exists for backwards compatibility. */
   code: string;
 
-  /** Generated primitive components file (present when no custom uiImportPath) */
+  /** Primitives file content, if the target produced one. Prefer files[] for new code. */
   primitives?: string;
 }
 
@@ -72,11 +72,12 @@ export function generate(options: GenerateOptions): GenerateResult {
     files: targetResult.files,
     fields: targetResult.fields,
     warnings: [...formDescriptor.warnings, ...targetResult.warnings],
-    code: targetResult.files[0]?.content ?? "",
+    code: targetResult.files[0].content,
     primitives: primitivesFile?.content,
   };
 }
 
+/** Bridge legacy GenerateOptions fields into target-specific option objects. */
 function buildTargetOptions(
   target: CodegenTarget,
   options: GenerateOptions,

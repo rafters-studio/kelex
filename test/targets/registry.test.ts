@@ -14,7 +14,11 @@ const customTarget: CodegenTarget = {
   description: "Custom test target",
   defaultExtension: ".custom",
   generate() {
-    return { files: [], fields: [], warnings: [] };
+    return {
+      files: [{ filename: "test.custom", content: "" }],
+      fields: [],
+      warnings: [],
+    };
   },
 };
 

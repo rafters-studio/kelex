@@ -33,7 +33,11 @@ describe("target types", () => {
       description: "A test target",
       defaultExtension: ".test",
       generate(_form, _options) {
-        return { files: [], fields: [], warnings: [] };
+        return {
+          files: [{ filename: "test.test", content: "" }],
+          fields: [],
+          warnings: [],
+        };
       },
     };
     expect(target.name).toBe("test");

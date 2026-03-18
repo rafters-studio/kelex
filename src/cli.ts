@@ -123,7 +123,12 @@ async function runGenerate(
         `Target produced a filename that escapes the output directory: ${file.filename}`,
       );
     }
-    fs.writeFileSync(filePath, file.content, "utf-8");
+    try {
+      fs.writeFileSync(filePath, file.content, "utf-8");
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      throw new Error(`Failed to write ${filePath}: ${message}`);
+    }
     console.log(`\u2713 Generated ${filePath}`);
   }
 
@@ -139,7 +144,7 @@ async function runGenerate(
 
 /**
  * Derives output path from schema path.
- * ./user-schema.ts -> ./user-form.tsx
+ * e.g. ./user-schema.ts -> ./user-form{defaultExtension}
  */
 function deriveOutputPath(
   schemaPath: string,
