@@ -24,7 +24,20 @@ export function listTargets(): CodegenTarget[] {
   return [...builtinTargets.values()];
 }
 
-/** Register a custom target. */
-export function registerTarget(target: CodegenTarget): void {
+/** Register a custom target. Throws if name is already taken unless force is set. */
+export function registerTarget(
+  target: CodegenTarget,
+  opts?: { force?: boolean },
+): void {
+  if (!opts?.force && builtinTargets.has(target.name)) {
+    throw new Error(
+      `Target "${target.name}" is already registered. Pass { force: true } to override.`,
+    );
+  }
   builtinTargets.set(target.name, target);
+}
+
+/** Remove a registered target by name. No-op if not found. */
+export function unregisterTarget(name: string): void {
+  builtinTargets.delete(name);
 }

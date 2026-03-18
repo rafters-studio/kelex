@@ -1,12 +1,26 @@
-import { describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it } from "vitest";
 import { compositeTarget } from "../../src/targets/composite";
 import { reactTanStackTarget } from "../../src/targets/react-tanstack";
 import {
   listTargets,
   registerTarget,
   resolveTarget,
+  unregisterTarget,
 } from "../../src/targets/registry";
 import type { CodegenTarget } from "../../src/targets/types";
+
+const customTarget: CodegenTarget = {
+  name: "custom-test",
+  description: "Custom test target",
+  defaultExtension: ".custom",
+  generate() {
+    return { files: [], fields: [], warnings: [] };
+  },
+};
+
+afterEach(() => {
+  unregisterTarget("custom-test");
+});
 
 describe("resolveTarget", () => {
   it("resolves react-tanstack target", () => {
@@ -52,16 +66,35 @@ describe("listTargets", () => {
 
 describe("registerTarget", () => {
   it("registers a custom target", () => {
-    const custom: CodegenTarget = {
-      name: "custom-test",
-      description: "Custom test target",
-      defaultExtension: ".custom",
-      generate() {
-        return { files: [], fields: [], warnings: [] };
-      },
-    };
+    registerTarget(customTarget);
+    expect(resolveTarget("custom-test")).toBe(customTarget);
+  });
 
-    registerTarget(custom);
-    expect(resolveTarget("custom-test")).toBe(custom);
+  it("throws when registering a name that already exists", () => {
+    expect(() => registerTarget(reactTanStackTarget)).toThrow(
+      "already registered",
+    );
+  });
+
+  it("allows overwrite with force option", () => {
+    registerTarget(customTarget);
+    const replacement: CodegenTarget = {
+      ...customTarget,
+      description: "Replaced",
+    };
+    registerTarget(replacement, { force: true });
+    expect(resolveTarget("custom-test").description).toBe("Replaced");
+  });
+});
+
+describe("unregisterTarget", () => {
+  it("removes a registered target", () => {
+    registerTarget(customTarget);
+    unregisterTarget("custom-test");
+    expect(() => resolveTarget("custom-test")).toThrow("Unknown target");
+  });
+
+  it("is a no-op for unknown names", () => {
+    expect(() => unregisterTarget("nonexistent")).not.toThrow();
   });
 });
