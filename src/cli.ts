@@ -112,8 +112,17 @@ async function runGenerate(
     fs.mkdirSync(outputDir, { recursive: true });
   }
 
+  const resolvedOutputDir = path.resolve(outputDir);
   for (const file of result.files) {
-    const filePath = path.join(outputDir, file.filename);
+    const filePath = path.resolve(outputDir, file.filename);
+    if (
+      !filePath.startsWith(`${resolvedOutputDir}${path.sep}`) &&
+      filePath !== resolvedOutputDir
+    ) {
+      throw new Error(
+        `Target produced a filename that escapes the output directory: ${file.filename}`,
+      );
+    }
     fs.writeFileSync(filePath, file.content, "utf-8");
     console.log(`\u2713 Generated ${filePath}`);
   }

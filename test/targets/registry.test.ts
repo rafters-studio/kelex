@@ -97,4 +97,13 @@ describe("unregisterTarget", () => {
   it("is a no-op for unknown names", () => {
     expect(() => unregisterTarget("nonexistent")).not.toThrow();
   });
+
+  it("throws when removing a built-in target", () => {
+    expect(() => unregisterTarget("react-tanstack")).toThrow(
+      "Cannot unregister built-in",
+    );
+    expect(() => unregisterTarget("composite")).toThrow(
+      "Cannot unregister built-in",
+    );
+  });
 });
