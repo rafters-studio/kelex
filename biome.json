@@ -43,6 +43,24 @@
   "files": {
     "includes": ["src/**", "test/**", "*.ts", "*.json"]
   },
+  "overrides": [
+    {
+      "includes": ["test/fixtures/**"],
+      "linter": {
+        "rules": {
+          "a11y": { "recommended": false }
+        }
+      },
+      "assist": {
+        "actions": {
+          "source": {
+            "organizeImports": { "level": "off" }
+          }
+        }
+      },
+      "formatter": { "enabled": false }
+    }
+  ],
   "assist": {
     "actions": {
       "source": {
