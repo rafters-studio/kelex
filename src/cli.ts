@@ -113,8 +113,10 @@ async function runGenerate(
   }
 
   const resolvedOutputDir = path.resolve(outputDir);
-  for (const file of result.files) {
-    const filePath = path.resolve(outputDir, file.filename);
+  for (let i = 0; i < result.files.length; i++) {
+    const file = result.files[i];
+    const filePath =
+      i === 0 ? absoluteOutputPath : path.resolve(outputDir, file.filename);
     if (
       !filePath.startsWith(`${resolvedOutputDir}${path.sep}`) &&
       filePath !== resolvedOutputDir

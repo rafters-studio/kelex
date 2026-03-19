@@ -141,6 +141,38 @@ describe("CLI", () => {
     });
   });
 
+  describe("targets command", () => {
+    it("lists available targets", () => {
+      const result = runCli(["targets"]);
+
+      expect(result).toContain("react-tanstack");
+      expect(result).toContain("composite");
+      expect(result).toContain(".tsx");
+      expect(result).toContain(".composite.json");
+    });
+  });
+
+  describe("generate --target", () => {
+    it("shows help with --target option", () => {
+      const result = runCli(["generate", "--help"]);
+
+      expect(result).toContain("--target");
+    });
+
+    it("shows error for unknown target", () => {
+      const schemaPath = path.join(FIXTURES_PATH, "user-schema.ts");
+      const { stderr } = runCliWithError([
+        "generate",
+        schemaPath,
+        "-s",
+        "userSchema",
+        "--target",
+        "nonexistent",
+      ]);
+      expect(stderr).toContain("Unknown target");
+    });
+  });
+
   describe("help", () => {
     it("shows help for generate command", () => {
       const result = runCli(["generate", "--help"]);
