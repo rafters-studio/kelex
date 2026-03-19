@@ -31,10 +31,10 @@ interface FieldProps {
 export function Field({ label, description, required, error, children }: FieldProps) {
   return (
     <div className="flex flex-col gap-1.5">
-      <label className="text-sm font-medium leading-none">
+      <span className="text-sm font-medium leading-none">
         {label}
         {required && <span className="text-red-500 ml-1">*</span>}
-      </label>
+      </span>
       {description && <p className="text-sm text-gray-500">{description}</p>}
       {children}
       {error && <p className="text-sm text-red-500">{error}</p>}
@@ -123,19 +123,12 @@ interface CheckboxProps {
 
 export function Checkbox({ checked, onCheckedChange, className = '' }: CheckboxProps) {
   return (
-    <button
-      type="button"
-      role="checkbox"
-      aria-checked={checked}
-      onClick={() => onCheckedChange?.(!checked)}
-      className={\`flex h-4 w-4 shrink-0 items-center justify-center rounded-sm border border-gray-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 \${checked ? 'bg-gray-900 border-gray-900 text-white dark:bg-gray-50 dark:border-gray-50 dark:text-gray-900' : ''} \${className}\`}
-    >
-      {checked && (
-        <svg className="h-3 w-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={3} strokeLinecap="round" strokeLinejoin="round">
-          <path d="M20 6 9 17l-5-5" />
-        </svg>
-      )}
-    </button>
+    <input
+      type="checkbox"
+      checked={checked ?? false}
+      onChange={() => onCheckedChange?.(!checked)}
+      className={\`h-4 w-4 shrink-0 rounded-sm border border-gray-300 accent-gray-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 dark:accent-gray-50 \${className}\`}
+    />
   );
 }
 
@@ -185,7 +178,7 @@ function SelectTrigger({ children }: { children: ReactNode }) {
       className="flex h-10 w-full items-center justify-between rounded-md border border-gray-300 bg-transparent px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 dark:border-gray-700"
     >
       {children}
-      <svg className="h-4 w-4 opacity-50" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+      <svg aria-hidden="true" className="h-4 w-4 opacity-50" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
         <path d="m6 9 6 6 6-6" />
       </svg>
     </button>
@@ -249,18 +242,14 @@ function RadioGroupRoot({ value, onValueChange, children, className = '' }: { va
 
 function RadioGroupItem({ value, id }: { value: string; id?: string }) {
   const { value: selected, onValueChange } = useContext(RadioGroupCtx);
-  const isSelected = selected === value;
   return (
-    <button
-      type="button"
-      role="radio"
-      aria-checked={isSelected}
+    <input
+      type="radio"
       id={id}
-      onClick={() => onValueChange(value)}
-      className="flex h-4 w-4 items-center justify-center rounded-full border border-gray-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2 dark:border-gray-700"
-    >
-      {isSelected && <div className="h-2.5 w-2.5 rounded-full bg-gray-900 dark:bg-gray-50" />}
-    </button>
+      checked={selected === value}
+      onChange={() => onValueChange(value)}
+      className="h-4 w-4 accent-gray-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2 dark:accent-gray-50"
+    />
   );
 }
 

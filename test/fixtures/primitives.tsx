@@ -151,7 +151,7 @@ export function Checkbox({
       type="checkbox"
       checked={checked ?? false}
       onChange={() => onCheckedChange?.(!checked)}
-      className={`h-4 w-4 shrink-0 rounded-sm border border-gray-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 ${className}`}
+      className={`h-4 w-4 shrink-0 rounded-sm border border-gray-300 accent-gray-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 dark:accent-gray-50 ${className}`}
     />
   );
 }
@@ -313,10 +313,10 @@ function RadioGroupItem({ value, id }: { value: string; id?: string }) {
   return (
     <input
       type="radio"
+      id={id}
       checked={selected === value}
       onChange={() => onValueChange(value)}
-      id={id}
-      className="h-4 w-4 border border-gray-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2 dark:border-gray-700"
+      className="h-4 w-4 accent-gray-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2 dark:accent-gray-50"
     />
   );
 }
