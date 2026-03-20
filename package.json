@@ -1,6 +1,6 @@
 {
   "name": "@rafters-studio/kelex",
-  "version": "0.0.1",
+  "version": "0.1.2",
   "description": "Generate forms from Zod schemas with pluggable targets",
   "type": "module",
   "license": "MIT",

@@ -77,4 +77,4 @@ jobs:
         run: pnpm build
 
       - name: Publish to npm
-        run: pnpm changeset publish
+        run: npm publish --access public
