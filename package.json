@@ -1,14 +1,14 @@
 {
-  "name": "@ezmode-games/kelex",
+  "name": "@rafters-studio/kelex",
   "version": "0.0.1",
-  "description": "Generate React form components from Zod schemas",
+  "description": "Generate forms from Zod schemas with pluggable targets",
   "type": "module",
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "https://github.com/ezmode-games/kelex.git"
+    "url": "https://github.com/rafters-studio/kelex.git"
   },
-  "homepage": "https://ezmode.games/oss/kelex",
+  "homepage": "https://rafters.studio/tools/kelex",
   "keywords": [
     "zod",
     "react",

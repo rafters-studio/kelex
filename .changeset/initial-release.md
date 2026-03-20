@@ -1,5 +1,5 @@
 ---
-"@ezmode-games/kelex": minor
+"@rafters-studio/kelex": minor
 ---
 
 Initial release of kelex - generate React form components from Zod schemas.
