@@ -1,7 +1,8 @@
 import { describe, expect, it, vi } from "vitest";
 import { z } from "zod/v4";
 import { generate } from "../../src/codegen/generator";
-import * as mapping from "../../src/mapping";
+import * as resolver from "../../src/mapping/resolver";
+import { compositeTarget } from "../../src/targets/composite";
 
 describe("generate", () => {
   describe("basic functionality", () => {
@@ -318,8 +319,8 @@ describe("generate", () => {
         broken: z.string(),
       });
 
-      const originalResolveField = mapping.resolveField;
-      vi.spyOn(mapping, "resolveField").mockImplementation((field) => {
+      const originalResolveField = resolver.resolveField;
+      vi.spyOn(resolver, "resolveField").mockImplementation((field) => {
         if (field.name === "broken") {
           throw new Error("Unsupported field type");
         }
@@ -384,6 +385,52 @@ describe("generate", () => {
 
       // No warnings
       expect(result.warnings).toEqual([]);
+    });
+  });
+
+  describe("target integration", () => {
+    it("passes targetOptions to target.generate()", () => {
+      const schema = z.object({ name: z.string() });
+
+      const result = generate({
+        schema,
+        formName: "TestForm",
+        schemaImportPath: "./schema",
+        schemaExportName: "testSchema",
+        target: compositeTarget,
+        targetOptions: { indent: 4 },
+      });
+
+      expect(result.code).toContain("    ");
+    });
+
+    it("code equals first file content", () => {
+      const schema = z.object({ name: z.string() });
+
+      const result = generate({
+        schema,
+        formName: "TestForm",
+        schemaImportPath: "./schema",
+        schemaExportName: "testSchema",
+      });
+
+      expect(result.code).toBe(result.files[0].content);
+    });
+
+    it("primitives matches primitives.tsx file content", () => {
+      const schema = z.object({ name: z.string() });
+
+      const result = generate({
+        schema,
+        formName: "TestForm",
+        schemaImportPath: "./schema",
+        schemaExportName: "testSchema",
+      });
+
+      const primitivesFile = result.files.find(
+        (f) => f.filename === "primitives.tsx",
+      );
+      expect(result.primitives).toBe(primitivesFile?.content);
     });
   });
 });

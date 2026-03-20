@@ -5,7 +5,7 @@ Generate type-safe React form components from Zod schemas. Built for [TanStack F
 ## Quick Start
 
 ```bash
-pnpx @ezmode-games/kelex@latest generate ./src/schemas/user.ts -s userSchema
+pnpx @rafters-studio/kelex@latest generate ./src/schemas/user.ts -s userSchema
 ```
 
 This reads your Zod schema and generates:
@@ -18,7 +18,7 @@ This reads your Zod schema and generates:
 The generated primitives are pure HTML/React components styled with Tailwind that match the shadcn component API. When you're ready to use your own components, pass `--ui` to swap the import path:
 
 ```bash
-pnpx @ezmode-games/kelex@latest generate ./src/schemas/user.ts -s userSchema --ui @/components/ui
+pnpx @rafters-studio/kelex@latest generate ./src/schemas/user.ts -s userSchema --ui @/components/ui
 ```
 
 ## Requirements
@@ -30,7 +30,7 @@ pnpx @ezmode-games/kelex@latest generate ./src/schemas/user.ts -s userSchema --u
 ## Usage
 
 ```bash
-pnpx @ezmode-games/kelex@latest generate <schema-path> [options]
+pnpx @rafters-studio/kelex@latest generate <schema-path> [options]
 ```
 
 ### Options
@@ -46,16 +46,16 @@ pnpx @ezmode-games/kelex@latest generate <schema-path> [options]
 
 ```bash
 # Basic - generates user-form.tsx + primitives.tsx
-pnpx @ezmode-games/kelex@latest generate ./src/schemas/user-schema.ts -s userSchema
+pnpx @rafters-studio/kelex@latest generate ./src/schemas/user-schema.ts -s userSchema
 
 # Custom output path and component name
-pnpx @ezmode-games/kelex@latest generate ./src/schemas/user.ts \
+pnpx @rafters-studio/kelex@latest generate ./src/schemas/user.ts \
   -o ./src/components/forms/profile-form.tsx \
   -n ProfileForm \
   -s userProfileSchema
 
 # Use your own shadcn components (no primitives generated)
-pnpx @ezmode-games/kelex@latest generate ./src/schemas/user.ts \
+pnpx @rafters-studio/kelex@latest generate ./src/schemas/user.ts \
   -s userSchema \
   --ui @/components/ui
 ```
@@ -129,7 +129,7 @@ The form handles nested objects (Card-based grouping), arrays (dynamic add/remov
 ## Programmatic API
 
 ```typescript
-import { generate } from "@ezmode-games/kelex";
+import { generate } from "@rafters-studio/kelex";
 import { userSchema } from "./schema";
 
 const result = generate({
@@ -162,7 +162,7 @@ result.primitives; // undefined
 
 ## Documentation
 
-Full documentation at [ezmode.games/oss/kelex](https://ezmode.games/oss/kelex)
+Full documentation at [rafters.studio/tools/kelex](https://rafters.studio/tools/kelex)
 
 ## License
 

@@ -5,12 +5,21 @@ import * as path from "node:path";
 import { pathToFileURL } from "node:url";
 import { Command } from "commander";
 import { generate } from "./codegen/generator";
+import { listTargets, resolveTarget } from "./targets/registry";
+
+interface GenerateCommandOptions {
+  output?: string;
+  name?: string;
+  schema: string;
+  ui?: string;
+  target: string;
+}
 
 const program = new Command();
 
 program
   .name("kelex")
-  .description("Generate React forms from Zod schemas")
+  .description("Generate forms from Zod schemas")
   .version("0.0.1");
 
 program
@@ -23,6 +32,7 @@ program
     "--ui <path>",
     "UI component import path (generates built-in primitives if omitted)",
   )
+  .option("-t, --target <name>", "Code generation target", "react-tanstack")
   .action(async (schemaPath: string, options: GenerateCommandOptions) => {
     try {
       await runGenerate(schemaPath, options);
@@ -33,32 +43,37 @@ program
     }
   });
 
-program.parse();
+program
+  .command("targets")
+  .description("List available code generation targets")
+  .action(() => {
+    const targets = listTargets();
+    console.log("Available targets:\n");
+    for (const t of targets) {
+      console.log(`  ${t.name}`);
+      console.log(`    ${t.description}`);
+      console.log(`    Default extension: ${t.defaultExtension}`);
+      console.log();
+    }
+  });
 
-interface GenerateCommandOptions {
-  output?: string;
-  name?: string;
-  schema: string;
-  ui?: string;
-}
+program.parse();
 
 async function runGenerate(
   schemaPath: string,
   options: GenerateCommandOptions,
 ): Promise<void> {
-  // Resolve schema path
   const absoluteSchemaPath = path.resolve(schemaPath);
 
-  // Check if file exists
   if (!fs.existsSync(absoluteSchemaPath)) {
     throw new Error(`Schema file not found: ${absoluteSchemaPath}`);
   }
 
-  // Dynamically import the schema file
+  const target = resolveTarget(options.target);
+
   const schemaUrl = pathToFileURL(absoluteSchemaPath).href;
   const schemaModule = await import(schemaUrl);
 
-  // Get the schema export
   const schemaExportName = options.schema;
   const schema = schemaModule[schemaExportName] ?? schemaModule.default;
 
@@ -68,75 +83,80 @@ async function runGenerate(
     );
   }
 
-  // Validate it's a Zod schema
   if (!schema._zod) {
     throw new Error(
       `Export "${schemaExportName}" is not a Zod schema. Ensure you are using zod >= 4.0.0`,
     );
   }
 
-  // Determine output path
-  const outputPath = options.output ?? deriveOutputPath(schemaPath);
+  const outputPath =
+    options.output ?? deriveOutputPath(schemaPath, target.defaultExtension);
   const absoluteOutputPath = path.resolve(outputPath);
-
-  // Determine form name
   const formName = options.name ?? deriveFormName(schemaExportName);
-
-  // Calculate relative import path from output to schema
   const schemaImportPath = calculateImportPath(
     absoluteOutputPath,
     absoluteSchemaPath,
   );
 
-  // Generate the form
   const result = generate({
     schema,
     formName,
     schemaImportPath,
     schemaExportName,
+    target,
     ...(options.ui ? { uiImportPath: options.ui } : {}),
   });
 
-  // Write output file
   const outputDir = path.dirname(absoluteOutputPath);
   if (!fs.existsSync(outputDir)) {
     fs.mkdirSync(outputDir, { recursive: true });
   }
-  fs.writeFileSync(absoluteOutputPath, result.code, "utf-8");
 
-  // Write primitives file if generated
-  if (result.primitives) {
-    const primitivesPath = path.join(outputDir, "primitives.tsx");
-    fs.writeFileSync(primitivesPath, result.primitives, "utf-8");
-    console.log(`\u2713 Generated ${primitivesPath}`);
+  const resolvedOutputDir = path.resolve(outputDir);
+  for (let i = 0; i < result.files.length; i++) {
+    const file = result.files[i];
+    const filePath =
+      i === 0 ? absoluteOutputPath : path.resolve(outputDir, file.filename);
+    if (
+      !filePath.startsWith(`${resolvedOutputDir}${path.sep}`) &&
+      filePath !== resolvedOutputDir
+    ) {
+      throw new Error(
+        `Target produced a filename that escapes the output directory: ${file.filename}`,
+      );
+    }
+    try {
+      fs.writeFileSync(filePath, file.content, "utf-8");
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      throw new Error(`Failed to write ${filePath}: ${message}`);
+    }
+    console.log(`\u2713 Generated ${filePath}`);
   }
 
-  // Print success message
-  console.log(`\u2713 Generated ${absoluteOutputPath}`);
   console.log(`  ${result.fields.length} fields: ${result.fields.join(", ")}`);
 
-  // Print warnings if any
   if (result.warnings.length > 0) {
     console.log("\nWarnings:");
     for (const warning of result.warnings) {
-      console.log(`  ⚠ ${warning}`);
+      console.log(`  \u26A0 ${warning}`);
     }
   }
 }
 
 /**
  * Derives output path from schema path.
- * ./user-schema.ts -> ./user-form.tsx
+ * e.g. ./user-schema.ts -> ./user-form{defaultExtension}
  */
-function deriveOutputPath(schemaPath: string): string {
+function deriveOutputPath(
+  schemaPath: string,
+  defaultExtension: string,
+): string {
   const dir = path.dirname(schemaPath);
   const base = path.basename(schemaPath, path.extname(schemaPath));
-
-  // Replace -schema or Schema suffix with -form
   const formBase = base.replace(/-schema$/i, "").replace(/schema$/i, "");
-
   const finalBase = formBase || base;
-  return path.join(dir, `${finalBase}-form.tsx`);
+  return path.join(dir, `${finalBase}-form${defaultExtension}`);
 }
 
 /**
@@ -158,11 +178,8 @@ function deriveFormName(schemaExportName: string): string {
 function calculateImportPath(outputPath: string, schemaPath: string): string {
   const outputDir = path.dirname(outputPath);
   let relativePath = path.relative(outputDir, schemaPath);
-
-  // Remove .ts/.tsx extension
   relativePath = relativePath.replace(/\.(ts|tsx)$/, "");
 
-  // Ensure it starts with ./
   if (!relativePath.startsWith(".") && !relativePath.startsWith("/")) {
     relativePath = `./${relativePath}`;
   }
