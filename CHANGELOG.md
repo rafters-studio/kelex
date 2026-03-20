@@ -1,4 +1,4 @@
-# @ezmode-games/kelex
+# @rafters-studio/kelex
 
 ## 0.1.2
 
