@@ -140,6 +140,37 @@ describe("generateFieldJSX", () => {
       expect(jsx).toContain("onBlur={field.handleBlur}");
     });
 
+    it("uses valueAsNumber onChange for number input", () => {
+      const field = createField({
+        type: "number",
+        metadata: { kind: "number" },
+      });
+      const config = createConfig({
+        component: "Input",
+        componentProps: { type: "number" },
+      });
+
+      const jsx = generateFieldJSX(field, config);
+
+      expect(jsx).toContain(
+        "onChange={(e) => field.handleChange(e.target.valueAsNumber)}",
+      );
+    });
+
+    it("uses string value onChange for text input", () => {
+      const field = createField();
+      const config = createConfig({
+        component: "Input",
+        componentProps: { type: "text" },
+      });
+
+      const jsx = generateFieldJSX(field, config);
+
+      expect(jsx).toContain(
+        "onChange={(e) => field.handleChange(e.target.value)}",
+      );
+    });
+
     it("includes min/max/step for number input", () => {
       const field = createField();
       const config = createConfig({

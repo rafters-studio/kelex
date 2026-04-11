@@ -572,10 +572,14 @@ function buildInputJSX(props: Record<string, unknown>): string {
     "maxLength",
     "pattern",
   ]);
+  const isNumber = props.type === "number";
+  const onChange = isNumber
+    ? "onChange={(e) => field.handleChange(e.target.valueAsNumber)}"
+    : "onChange={(e) => field.handleChange(e.target.value)}";
   return `      <Input
 ${propsStr}
         value={field.state.value ?? ""}
-        onChange={(e) => field.handleChange(e.target.value)}
+        ${onChange}
         onBlur={field.handleBlur}
       />`;
 }
