@@ -178,6 +178,28 @@ describe("introspect", () => {
       expect(result.fields[0].constraints).toEqual({ format: "email" });
       expect(result.fields[0].isOptional).toBe(true);
     });
+
+    it("extracts constraints from field with default value", () => {
+      const schema = z.object({
+        field: z.string().email().default("user@example.com"),
+      });
+      const result = introspect(schema, defaultOptions);
+
+      expect(result.fields[0].type).toBe("string");
+      expect(result.fields[0].constraints).toEqual({ format: "email" });
+      expect(result.warnings).toHaveLength(0);
+    });
+
+    it("correctly types number field with default value", () => {
+      const schema = z.object({
+        count: z.number().min(0).max(100).default(0),
+      });
+      const result = introspect(schema, defaultOptions);
+
+      expect(result.fields[0].type).toBe("number");
+      expect(result.fields[0].constraints).toEqual({ min: 0, max: 100 });
+      expect(result.warnings).toHaveLength(0);
+    });
   });
 
   describe("label generation", () => {

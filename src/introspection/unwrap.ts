@@ -54,16 +54,18 @@ export function unwrapSchema(schema: $ZodType): UnwrapResult {
   let isOptional = false;
   let isNullable = false;
 
-  // Unwrap nested optional/nullable wrappers
+  // Unwrap nested optional/nullable/default wrappers
   while (
     current._zod.def.type === "optional" ||
-    current._zod.def.type === "nullable"
+    current._zod.def.type === "nullable" ||
+    current._zod.def.type === "default"
   ) {
     if (current._zod.def.type === "optional") {
       isOptional = true;
-    } else {
+    } else if (current._zod.def.type === "nullable") {
       isNullable = true;
     }
+    // default: no flag, just peel the wrapper to get at the inner type
 
     if (!hasUnwrap(current)) {
       throw new Error(`${current._zod.def.type} schema missing unwrap method`);

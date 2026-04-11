@@ -110,6 +110,31 @@ describe("unwrapSchema", () => {
     expect(result.inner._zod.def.type).toBe("union");
   });
 
+  // z.default() unwrapping
+  it("unwraps z.default() to expose the inner type", () => {
+    const schema = z.string().default("hello");
+    const result = unwrapSchema(schema);
+
+    expect(result.inner._zod.def.type).toBe("string");
+    expect(result.isOptional).toBe(false);
+    expect(result.isNullable).toBe(false);
+  });
+
+  it("unwraps z.number().default() to expose number type", () => {
+    const schema = z.number().default(0);
+    const result = unwrapSchema(schema);
+
+    expect(result.inner._zod.def.type).toBe("number");
+  });
+
+  it("unwraps optional().default() combination", () => {
+    const schema = z.string().optional().default("fallback");
+    const result = unwrapSchema(schema);
+
+    expect(result.inner._zod.def.type).toBe("string");
+    expect(result.isOptional).toBe(true);
+  });
+
   it("throws for malformed schema with _zod but no def", () => {
     const malformed = { _zod: {} } as unknown as z.ZodType;
     expect(() => unwrapSchema(malformed)).toThrow(
