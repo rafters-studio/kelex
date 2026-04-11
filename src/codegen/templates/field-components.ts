@@ -154,10 +154,15 @@ function buildFieldArrayJSX(
 
 function buildSimpleArrayJSX(
   _field: FieldDescriptor,
-  _elementConfig: ComponentConfig,
+  elementConfig: ComponentConfig,
   path: string,
   fieldProps: ComponentConfig["fieldProps"],
 ): string {
+  const isNumberElement = elementConfig.componentProps.type === "number";
+  const onChange = isNumberElement
+    ? "onChange={(e) => field.handleChange(e.target.valueAsNumber)}"
+    : "onChange={(e) => field.handleChange(e.target.value)}";
+  const pushValue = isNumberElement ? "0" : '""';
   return `<form.Field name="${escapeJSXAttribute(path)}" mode="array">
   {(arrayField) => (
     <Card>
@@ -173,7 +178,7 @@ function buildSimpleArrayJSX(
                 <Field label={\`Item \${i + 1}\`} error={field.state.meta.errors?.[0]}>
                   <Input
                     value={field.state.value ?? ""}
-                    onChange={(e) => field.handleChange(e.target.value)}
+                    ${onChange}
                     onBlur={field.handleBlur}
                   />
                 </Field>
@@ -182,7 +187,7 @@ function buildSimpleArrayJSX(
             <Button type="button" variant="outline" size="sm" onClick={() => arrayField.removeValue(i)}>Remove</Button>
           </div>
         ))}
-        <Button type="button" variant="outline" onClick={() => arrayField.pushValue("")}>Add ${escapeJSXText(fieldProps.label)}</Button>
+        <Button type="button" variant="outline" onClick={() => arrayField.pushValue(${pushValue})}>Add ${escapeJSXText(fieldProps.label)}</Button>
       </CardContent>
     </Card>
   )}

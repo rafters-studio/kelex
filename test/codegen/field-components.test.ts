@@ -401,6 +401,99 @@ describe("generateFieldJSX", () => {
     });
   });
 
+  describe("FieldArray simple array", () => {
+    it("uses valueAsNumber onChange for number array elements", () => {
+      const elementConfig: ComponentConfig = {
+        component: "Input",
+        componentProps: { type: "number" },
+        fieldProps: { label: "Item", required: true },
+      };
+      const field = createField({
+        name: "scores",
+        label: "Scores",
+        type: "array",
+        metadata: {
+          kind: "array",
+          element: createField({
+            name: "item",
+            type: "number",
+            metadata: { kind: "number" },
+          }),
+        },
+      });
+      const config = createConfig({
+        component: "FieldArray",
+        componentProps: { elementConfig, elementField: field },
+      });
+
+      const jsx = generateFieldJSX(field, config);
+
+      expect(jsx).toContain(
+        "onChange={(e) => field.handleChange(e.target.valueAsNumber)}",
+      );
+    });
+
+    it("uses string onChange for string array elements", () => {
+      const elementConfig: ComponentConfig = {
+        component: "Input",
+        componentProps: { type: "text" },
+        fieldProps: { label: "Item", required: true },
+      };
+      const field = createField({
+        name: "tags",
+        label: "Tags",
+        type: "array",
+        metadata: {
+          kind: "array",
+          element: createField({
+            name: "item",
+            type: "string",
+            metadata: { kind: "string" },
+          }),
+        },
+      });
+      const config = createConfig({
+        component: "FieldArray",
+        componentProps: { elementConfig, elementField: field },
+      });
+
+      const jsx = generateFieldJSX(field, config);
+
+      expect(jsx).toContain(
+        "onChange={(e) => field.handleChange(e.target.value)}",
+      );
+    });
+
+    it("uses 0 as pushValue for number array elements", () => {
+      const elementConfig: ComponentConfig = {
+        component: "Input",
+        componentProps: { type: "number" },
+        fieldProps: { label: "Item", required: true },
+      };
+      const field = createField({
+        name: "scores",
+        label: "Scores",
+        type: "array",
+        metadata: {
+          kind: "array",
+          element: createField({
+            name: "item",
+            type: "number",
+            metadata: { kind: "number" },
+          }),
+        },
+      });
+      const config = createConfig({
+        component: "FieldArray",
+        componentProps: { elementConfig, elementField: field },
+      });
+
+      const jsx = generateFieldJSX(field, config);
+
+      expect(jsx).toContain("arrayField.pushValue(0)");
+    });
+  });
+
   describe("option label formatting", () => {
     it("capitalizes first letter", () => {
       const field = createField();
