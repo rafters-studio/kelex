@@ -1,12 +1,9 @@
 import { describe, expect, it } from "vitest";
 
 describe("public API exports", () => {
-  it("exports all codegen functions", async () => {
+  it("exports the generate orchestrator", async () => {
     const mod = await import("../src/index");
     expect(typeof mod.generate).toBe("function");
-    expect(typeof mod.generateFieldJSX).toBe("function");
-    expect(typeof mod.generateFormFile).toBe("function");
-    expect(typeof mod.inferTypeName).toBe("function");
   });
 
   it("exports all introspection functions", async () => {
@@ -35,8 +32,6 @@ describe("public API exports", () => {
     expect(typeof mod.listTargets).toBe("function");
     expect(typeof mod.registerTarget).toBe("function");
     expect(typeof mod.unregisterTarget).toBe("function");
-    expect(mod.reactTanStackTarget).toBeDefined();
-    expect(mod.reactTanStackTarget.name).toBe("react-tanstack");
     expect(mod.compositeTarget).toBeDefined();
     expect(mod.compositeTarget.name).toBe("composite");
   });

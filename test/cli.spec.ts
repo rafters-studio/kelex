@@ -2,6 +2,7 @@ import { execFileSync } from "node:child_process";
 import * as fs from "node:fs";
 import * as path from "node:path";
 import { afterEach, beforeAll, describe, expect, it } from "vitest";
+import { version as packageVersion } from "../package.json";
 
 const CLI_PATH = path.resolve(__dirname, "../dist/cli.js");
 const FIXTURES_PATH = path.resolve(__dirname, "fixtures");
@@ -43,9 +44,9 @@ describe("CLI", () => {
   });
 
   describe("generate command", () => {
-    it("generates form from schema file", () => {
+    it("generates a composite descriptor from a schema file", () => {
       const schemaPath = path.join(FIXTURES_PATH, "user-schema.ts");
-      const outputPath = path.join(TEST_OUTPUT_DIR, "user-form.tsx");
+      const outputPath = path.join(TEST_OUTPUT_DIR, "user.composite.json");
 
       const result = runCli([
         "generate",
@@ -60,10 +61,10 @@ describe("CLI", () => {
       expect(result).toContain("9 fields");
       expect(fs.existsSync(outputPath)).toBe(true);
 
-      const content = fs.readFileSync(outputPath, "utf-8");
-      expect(content).toContain("'use client'");
-      expect(content).toContain("export function UserForm");
-      expect(content).toContain("userSchema");
+      const descriptor = JSON.parse(fs.readFileSync(outputPath, "utf-8"));
+      expect(descriptor.name).toBe("UserForm");
+      expect(descriptor.schemaExportName).toBe("userSchema");
+      expect(descriptor.fields).toHaveLength(9);
     });
 
     it("derives output path from schema path", () => {
@@ -74,8 +75,11 @@ describe("CLI", () => {
 
       expect(result).toContain("Generated");
 
-      // Should create user-form.tsx in fixtures dir
-      const expectedOutput = path.join(FIXTURES_PATH, "user-form.tsx");
+      // Should create user-form.composite.json in fixtures dir
+      const expectedOutput = path.join(
+        FIXTURES_PATH,
+        "user-form.composite.json",
+      );
       expect(fs.existsSync(expectedOutput)).toBe(true);
 
       // Clean up
@@ -84,7 +88,7 @@ describe("CLI", () => {
 
     it("uses custom form name", () => {
       const schemaPath = path.join(FIXTURES_PATH, "user-schema.ts");
-      const outputPath = path.join(TEST_OUTPUT_DIR, "custom-form.tsx");
+      const outputPath = path.join(TEST_OUTPUT_DIR, "custom.composite.json");
 
       runCli([
         "generate",
@@ -97,28 +101,8 @@ describe("CLI", () => {
         "CustomUserForm",
       ]);
 
-      const content = fs.readFileSync(outputPath, "utf-8");
-      expect(content).toContain("export function CustomUserForm");
-      expect(content).toContain("interface CustomUserFormProps");
-    });
-
-    it("uses custom UI import path", () => {
-      const schemaPath = path.join(FIXTURES_PATH, "user-schema.ts");
-      const outputPath = path.join(TEST_OUTPUT_DIR, "ui-form.tsx");
-
-      runCli([
-        "generate",
-        schemaPath,
-        "-o",
-        outputPath,
-        "-s",
-        "userSchema",
-        "--ui",
-        "@custom/ui",
-      ]);
-
-      const content = fs.readFileSync(outputPath, "utf-8");
-      expect(content).toContain("from '@custom/ui'");
+      const descriptor = JSON.parse(fs.readFileSync(outputPath, "utf-8"));
+      expect(descriptor.name).toBe("CustomUserForm");
     });
 
     it("shows error for non-existent file", () => {
@@ -145,10 +129,9 @@ describe("CLI", () => {
     it("lists available targets", () => {
       const result = runCli(["targets"]);
 
-      expect(result).toContain("react-tanstack");
       expect(result).toContain("composite");
-      expect(result).toContain(".tsx");
       expect(result).toContain(".composite.json");
+      expect(result).not.toContain("react-tanstack");
     });
   });
 
@@ -181,12 +164,12 @@ describe("CLI", () => {
       expect(result).toContain("--output");
       expect(result).toContain("--name");
       expect(result).toContain("--schema");
-      expect(result).toContain("--ui");
+      expect(result).not.toContain("--ui");
     });
 
-    it("shows version", () => {
+    it("reports the package.json version", () => {
       const result = runCli(["--version"]);
-      expect(result.trim()).toBe("0.0.1");
+      expect(result.trim()).toBe(packageVersion);
     });
   });
 });

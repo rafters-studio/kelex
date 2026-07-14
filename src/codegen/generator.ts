@@ -1,7 +1,5 @@
 import type { $ZodType } from "zod/v4/core";
 import { introspect } from "../introspection";
-import { reactTanStackTarget } from "../targets/react-tanstack";
-import type { ReactTanStackOptions } from "../targets/react-tanstack/types";
 import type {
   CodegenTarget,
   TargetOptions,
@@ -21,11 +19,8 @@ export interface GenerateOptions {
   /** Exported name of the schema */
   schemaExportName: string;
 
-  /** UI component import path. Only applies to targets that support it (e.g. react-tanstack). */
-  uiImportPath?: string;
-
-  /** Code generation target. Defaults to react-tanstack. */
-  target?: CodegenTarget;
+  /** Code generation target */
+  target: CodegenTarget;
 
   /** Target-specific options passed to target.generate() */
   targetOptions?: TargetOptions;
@@ -40,20 +35,14 @@ export interface GenerateResult {
 
   /** Any warnings (e.g., unsupported features skipped) */
   warnings: string[];
-
-  /** First file's content. Prefer files[] for new code. Exists for backwards compatibility. */
-  code: string;
-
-  /** Primitives file content, if the target produced one. Prefer files[] for new code. */
-  primitives?: string;
 }
 
 /**
- * Generates a form component from a Zod schema.
+ * Generates form artifacts from a Zod schema via the given target.
  */
 export function generate(options: GenerateOptions): GenerateResult {
-  const { schema, formName, schemaImportPath, schemaExportName } = options;
-  const target = options.target ?? reactTanStackTarget;
+  const { schema, formName, schemaImportPath, schemaExportName, target } =
+    options;
 
   const formDescriptor = introspect(schema, {
     formName,
@@ -61,36 +50,14 @@ export function generate(options: GenerateOptions): GenerateResult {
     schemaExportName,
   });
 
-  const targetOptions = buildTargetOptions(target, options);
-  const targetResult = target.generate(formDescriptor, targetOptions);
-
-  const primitivesFile = targetResult.files.find(
-    (f) => f.filename === "primitives.tsx",
+  const targetResult = target.generate(
+    formDescriptor,
+    options.targetOptions ?? {},
   );
 
   return {
     files: targetResult.files,
     fields: targetResult.fields,
     warnings: [...formDescriptor.warnings, ...targetResult.warnings],
-    code: targetResult.files[0].content,
-    primitives: primitivesFile?.content,
   };
-}
-
-/** Bridge legacy GenerateOptions fields into target-specific option objects. */
-function buildTargetOptions(
-  target: CodegenTarget,
-  options: GenerateOptions,
-): TargetOptions {
-  if (options.targetOptions) {
-    return options.targetOptions;
-  }
-
-  if (target === reactTanStackTarget && options.uiImportPath !== undefined) {
-    return {
-      uiImportPath: options.uiImportPath,
-    } satisfies ReactTanStackOptions;
-  }
-
-  return {};
 }

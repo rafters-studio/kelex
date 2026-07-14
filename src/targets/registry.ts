@@ -1,11 +1,9 @@
 import { compositeTarget } from "./composite";
-import { reactTanStackTarget } from "./react-tanstack";
 import type { CodegenTarget } from "./types";
 
-const BUILTIN_NAMES = new Set([reactTanStackTarget.name, compositeTarget.name]);
+const BUILTIN_NAMES = new Set([compositeTarget.name]);
 
 const targets = new Map<string, CodegenTarget>([
-  [reactTanStackTarget.name, reactTanStackTarget],
   [compositeTarget.name, compositeTarget],
 ]);
 
