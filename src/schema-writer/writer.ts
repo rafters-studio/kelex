@@ -1,4 +1,3 @@
-import { inferTypeName } from "../codegen";
 import type { FieldDescriptor, FormDescriptor } from "../introspection";
 import { emitField } from "./field-emitter";
 import type {
@@ -31,6 +30,20 @@ export function writeSchema(options: SchemaWriterOptions): SchemaWriterResult {
   lines.push("");
 
   return { code: lines.join("\n"), warnings: [] };
+}
+
+/**
+ * Infers TypeScript type name from schema export name.
+ * userSchema -> User
+ */
+function inferTypeName(schemaExportName: string): string {
+  const stripped = schemaExportName.replace(/Schema$/i, "");
+
+  if (stripped.trim().length === 0) {
+    return "Schema";
+  }
+
+  return stripped.replace(/^./, (s) => s.toUpperCase());
 }
 
 /**

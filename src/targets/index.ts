@@ -1,7 +1,5 @@
 export type { CompositeOptions } from "./composite";
 export { compositeTarget } from "./composite";
-export type { ReactTanStackOptions } from "./react-tanstack";
-export { reactTanStackTarget } from "./react-tanstack";
 export {
   listTargets,
   registerTarget,

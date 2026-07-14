@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 
 import * as fs from "node:fs";
+import { createRequire } from "node:module";
 import * as path from "node:path";
 import { pathToFileURL } from "node:url";
 import { Command } from "commander";
@@ -11,16 +12,18 @@ interface GenerateCommandOptions {
   output?: string;
   name?: string;
   schema: string;
-  ui?: string;
   target: string;
 }
+
+const require = createRequire(import.meta.url);
+const { version } = require("../package.json") as { version: string };
 
 const program = new Command();
 
 program
   .name("kelex")
   .description("Generate forms from Zod schemas")
-  .version("0.0.1");
+  .version(version);
 
 program
   .command("generate <schema-path>")
@@ -28,11 +31,7 @@ program
   .option("-o, --output <path>", "Output file path")
   .option("-n, --name <name>", "Form component name")
   .option("-s, --schema <name>", "Exported schema name", "schema")
-  .option(
-    "--ui <path>",
-    "UI component import path (generates built-in primitives if omitted)",
-  )
-  .option("-t, --target <name>", "Code generation target", "react-tanstack")
+  .option("-t, --target <name>", "Code generation target", "composite")
   .action(async (schemaPath: string, options: GenerateCommandOptions) => {
     try {
       await runGenerate(schemaPath, options);
@@ -104,7 +103,6 @@ async function runGenerate(
     schemaImportPath,
     schemaExportName,
     target,
-    ...(options.ui ? { uiImportPath: options.ui } : {}),
   });
 
   const outputDir = path.dirname(absoluteOutputPath);

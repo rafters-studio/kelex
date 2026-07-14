@@ -123,7 +123,7 @@ describe("compositeTarget", () => {
       target: compositeTarget,
     });
 
-    const parsed = JSON.parse(result.code);
+    const parsed = JSON.parse(result.files[0].content);
     expect(parsed.name).toBe("TestForm");
     expect(result.files).toHaveLength(1);
   });

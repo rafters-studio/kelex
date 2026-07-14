@@ -1,5 +1,4 @@
 import { describe, expect, it } from "vitest";
-import { generate } from "../../src/codegen/generator";
 import type { FieldConstraints, FieldType } from "../../src/introspection";
 import { introspect } from "../../src/introspection";
 import type { ComponentType } from "../../src/mapping";
@@ -32,19 +31,13 @@ interface FieldAssertion {
 interface SchemaTestCase {
   name: string;
   schema: unknown;
-  expectedHardFeatures: string[];
   expectedFields: FieldAssertion[];
-  expectedCodeContains: string[];
-  expectedCodeExcludes?: string[];
-  expectedImports: ComponentType[];
-  expectedWarningCount?: number;
 }
 
 const schemas: SchemaTestCase[] = [
   {
     name: "01 Healthcare: Patient Intake",
     schema: patientIntakeSchema,
-    expectedHardFeatures: ["nested object (address)"],
     expectedFields: [
       {
         name: "firstName",
@@ -100,24 +93,10 @@ const schemas: SchemaTestCase[] = [
         component: "Input",
       },
     ],
-    expectedCodeContains: [
-      "<RadioGroup",
-      "<Textarea",
-      "<DatePicker",
-      "CardTitle",
-      'name="address.street"',
-      'name="address.city"',
-    ],
-    expectedImports: ["Input", "RadioGroup", "DatePicker", "Textarea"],
   },
   {
     name: "02 E-commerce: Product Listing",
     schema: productListingSchema,
-    expectedHardFeatures: [
-      "nested object (price)",
-      "array (tags, images)",
-      "discriminated union (attributes)",
-    ],
     expectedFields: [
       {
         name: "title",
@@ -149,24 +128,10 @@ const schemas: SchemaTestCase[] = [
       },
       { name: "isActive", type: "boolean", component: "Checkbox" },
     ],
-    expectedCodeContains: [
-      "<Textarea",
-      "<Select",
-      "<Checkbox",
-      'mode="array"',
-      "CardTitle",
-      'Select.Item value="physical"',
-      'Select.Item value="digital"',
-    ],
-    expectedImports: ["Textarea", "Input", "Select", "Checkbox"],
   },
   {
     name: "03 Finance: Loan Application",
     schema: loanApplicationSchema,
-    expectedHardFeatures: [
-      "discriminated union (loanDetails)",
-      ".check() on root",
-    ],
     expectedFields: [
       {
         name: "applicantFirstName",
@@ -204,24 +169,10 @@ const schemas: SchemaTestCase[] = [
       { name: "hasCoSigner", type: "boolean", component: "Checkbox" },
       { name: "agreeToTerms", type: "boolean", component: "Checkbox" },
     ],
-    expectedCodeContains: [
-      "<Select",
-      "<Textarea",
-      "<Checkbox",
-      'Select.Item value="personal"',
-      'Select.Item value="business"',
-      "CardTitle",
-    ],
-    expectedImports: ["Input", "Select", "Textarea", "Checkbox"],
   },
   {
     name: "04 HR: Job Application",
     schema: jobApplicationSchema,
-    expectedHardFeatures: [
-      "array of objects (education, workExperience)",
-      "array of strings (skills)",
-      "nullable optional URL",
-    ],
     expectedFields: [
       {
         name: "firstName",
@@ -289,24 +240,10 @@ const schemas: SchemaTestCase[] = [
       { name: "willingToRelocate", type: "boolean", component: "Checkbox" },
       { name: "authorizedToWork", type: "boolean", component: "Checkbox" },
     ],
-    expectedCodeContains: [
-      'mode="array"',
-      "<Textarea",
-      "<Select",
-      "<DatePicker",
-      "<Checkbox",
-      'type="url"',
-    ],
-    expectedImports: ["Input", "Select", "DatePicker", "Textarea", "Checkbox"],
   },
   {
     name: "05 Real Estate: Property Listing",
     schema: propertyListingSchema,
-    expectedHardFeatures: [
-      "intersection (.and())",
-      "deeply nested object (address inside location)",
-      "array (amenities)",
-    ],
     expectedFields: [
       {
         name: "title",
@@ -359,33 +296,10 @@ const schemas: SchemaTestCase[] = [
       { name: "amenities", type: "array", component: "FieldArray" },
       { name: "hoaFee", type: "number", isOptional: true, component: "Input" },
     ],
-    expectedCodeContains: [
-      "<Textarea",
-      "<Select",
-      "<RadioGroup",
-      "<DatePicker",
-      "<Slider",
-      'mode="array"',
-      "CardTitle",
-      'name="address.street"',
-    ],
-    expectedImports: [
-      "Textarea",
-      "Input",
-      "Select",
-      "RadioGroup",
-      "DatePicker",
-      "Slider",
-    ],
   },
   {
     name: "06 Education: Course Enrollment",
     schema: courseEnrollmentSchema,
-    expectedHardFeatures: [
-      "tuple (semester)",
-      "record (preferences)",
-      "array of objects (courses)",
-    ],
     expectedFields: [
       { name: "studentId", type: "string", component: "Input" },
       {
@@ -421,30 +335,10 @@ const schemas: SchemaTestCase[] = [
       { name: "financialAidApplied", type: "boolean", component: "Checkbox" },
       { name: "enrollmentDate", type: "date", component: "DatePicker" },
     ],
-    expectedCodeContains: [
-      'mode="array"',
-      "<Select",
-      "<RadioGroup",
-      "<Checkbox",
-      "<DatePicker",
-      "CardTitle",
-    ],
-    expectedImports: [
-      "Input",
-      "Select",
-      "RadioGroup",
-      "Checkbox",
-      "DatePicker",
-    ],
   },
   {
     name: "07 Logistics: Shipment Booking",
     schema: shipmentBookingSchema,
-    expectedHardFeatures: [
-      "discriminated union (shippingMethod)",
-      "nested objects (addresses)",
-      "array of objects (packages)",
-    ],
     expectedFields: [
       { name: "bookingReference", type: "string", component: "Input" },
       {
@@ -496,22 +390,10 @@ const schemas: SchemaTestCase[] = [
         constraints: { maxLength: 2000 },
       },
     ],
-    expectedCodeContains: [
-      'mode="array"',
-      "<Textarea",
-      "<DatePicker",
-      "<Checkbox",
-      "CardTitle",
-      'Select.Item value="ground"',
-      'Select.Item value="air"',
-      'Select.Item value="sea"',
-    ],
-    expectedImports: ["Input", "Textarea", "DatePicker", "Checkbox", "Select"],
   },
   {
     name: "08 Legal: Contract Intake",
     schema: contractIntakeSchema,
-    expectedHardFeatures: ["branded type (CaseNumber)", "nullish fields"],
     expectedFields: [
       { name: "caseNumber", type: "string", component: "Input" },
       {
@@ -606,30 +488,10 @@ const schemas: SchemaTestCase[] = [
         constraints: { maxLength: 5000 },
       },
     ],
-    expectedCodeContains: [
-      "<Select",
-      "<RadioGroup",
-      "<Textarea",
-      "<DatePicker",
-      "<Checkbox",
-      'type="email"',
-    ],
-    expectedImports: [
-      "Input",
-      "Select",
-      "RadioGroup",
-      "Textarea",
-      "DatePicker",
-      "Checkbox",
-    ],
   },
   {
     name: "09 SaaS: User Settings",
     schema: userSettingsSchema,
-    expectedHardFeatures: [
-      "nested object (notifications)",
-      "record (featureFlags)",
-    ],
     expectedFields: [
       {
         name: "displayName",
@@ -681,24 +543,10 @@ const schemas: SchemaTestCase[] = [
         component: "Input",
       },
     ],
-    expectedCodeContains: [
-      "<RadioGroup",
-      "<Select",
-      "<Checkbox",
-      "<Slider",
-      "CardTitle",
-      'type="url"',
-    ],
-    expectedImports: ["Input", "RadioGroup", "Select", "Checkbox", "Slider"],
   },
   {
     name: "10 Insurance: Claims Submission",
     schema: claimsSubmissionSchema,
-    expectedHardFeatures: [
-      "nested object (claimant with nested address)",
-      "discriminated union (claimDetails)",
-      "array of objects (documents)",
-    ],
     expectedFields: [
       {
         name: "claimant",
@@ -736,28 +584,10 @@ const schemas: SchemaTestCase[] = [
       },
       { name: "fraudAcknowledgment", type: "boolean", component: "Checkbox" },
     ],
-    expectedCodeContains: [
-      "<Textarea",
-      "<DatePicker",
-      "<Checkbox",
-      'mode="array"',
-      "CardTitle",
-      'Select.Item value="auto"',
-      'Select.Item value="home"',
-      'Select.Item value="health"',
-    ],
-    expectedImports: ["Input", "Textarea", "DatePicker", "Checkbox", "Select"],
   },
   {
     name: "11 Government: Tax Filing",
     schema: taxFilingSchema,
-    expectedHardFeatures: [
-      ".check() cross-field validation",
-      "nested object (address, bankAccount, itemizedDeductions)",
-      "array of discriminated unions (incomeSources)",
-      "array of objects (dependents)",
-      "conditional required fields",
-    ],
     expectedFields: [
       { name: "taxYear", type: "number", component: "Slider" },
       { name: "filingStatus", type: "enum", component: "Select" },
@@ -856,16 +686,6 @@ const schemas: SchemaTestCase[] = [
       { name: "signatureDate", type: "date", component: "DatePicker" },
       { name: "electronicSignature", type: "boolean", component: "Checkbox" },
     ],
-    expectedCodeContains: [
-      "<Select",
-      "<Slider",
-      "<DatePicker",
-      "<Checkbox",
-      'mode="array"',
-      "CardTitle",
-      'name="address.street"',
-    ],
-    expectedImports: ["Input", "Select", "Slider", "DatePicker", "Checkbox"],
   },
 ];
 
@@ -878,28 +698,6 @@ const INTROSPECT_OPTS = {
 describe("Stress test: complex Zod v4 schemas", () => {
   for (const testCase of schemas) {
     describe(testCase.name, () => {
-      it("should generate a form", () => {
-        const opts = {
-          schema: testCase.schema as Parameters<typeof generate>[0]["schema"],
-          formName: `${testCase.name.replace(/[^a-zA-Z]/g, "")}Form`,
-          schemaImportPath: "./schema",
-          schemaExportName: "schema",
-        };
-
-        const result = generate(opts);
-
-        expect(result.fields.length).toBeGreaterThan(0);
-
-        console.log(`[CODEGEN] ${testCase.name}`);
-        console.log(`  Fields: ${result.fields.join(", ")}`);
-        if (result.warnings.length > 0) {
-          console.log(`  Warnings: ${result.warnings.join("; ")}`);
-        }
-        console.log(
-          `  Hard features: ${testCase.expectedHardFeatures.join(", ")}`,
-        );
-      });
-
       it("should round-trip through schema writer", () => {
         const descriptor1 = introspect(
           testCase.schema as Parameters<typeof introspect>[0],
@@ -984,48 +782,6 @@ describe("Stress test: complex Zod v4 schemas", () => {
             `${expected.name} -> ${expected.component}`,
           ).toBe(expected.component);
         }
-      });
-
-      it("should generate correct JSX structure", () => {
-        const result = generate({
-          schema: testCase.schema as Parameters<typeof generate>[0]["schema"],
-          formName: `${testCase.name.replace(/[^a-zA-Z]/g, "")}Form`,
-          schemaImportPath: "./schema",
-          schemaExportName: "schema",
-        });
-
-        for (const expected of testCase.expectedCodeContains) {
-          expect(result.code, `code should contain: ${expected}`).toContain(
-            expected,
-          );
-        }
-
-        for (const excluded of testCase.expectedCodeExcludes ?? []) {
-          expect(
-            result.code,
-            `code should not contain: ${excluded}`,
-          ).not.toContain(excluded);
-        }
-
-        for (const field of testCase.expectedFields) {
-          for (const path of field.nestedPaths ?? []) {
-            const staticMatch = result.code.includes(`"${path}"`);
-            const templateMatch = result.code.includes(path);
-            expect(
-              staticMatch || templateMatch,
-              `missing nested path: ${path}`,
-            ).toBe(true);
-          }
-        }
-
-        for (const component of testCase.expectedImports) {
-          expect(result.code, `missing import: ${component}`).toContain(
-            `${component},`,
-          );
-        }
-
-        const expectedWarnings = testCase.expectedWarningCount ?? 0;
-        expect(result.warnings).toHaveLength(expectedWarnings);
       });
     });
   }

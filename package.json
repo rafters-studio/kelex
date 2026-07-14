@@ -40,7 +40,7 @@
     "typecheck": "tsc --noEmit",
     "test": "vitest run --exclude '**/*.spec.ts'",
     "test:unit": "vitest run --exclude '**/*.spec.ts'",
-    "test:spec": "vitest run --include '**/*.spec.ts'",
+    "test:spec": "vitest run test/cli.spec.ts test/stress/stress.spec.ts",
     "test:all": "vitest run",
     "test:watch": "vitest",
     "test:coverage": "vitest run --coverage",
@@ -68,7 +68,6 @@
     "tsup": "^8.0.0",
     "typescript": "^5.5.0",
     "vitest": "^2.0.0",
-    "zocker": "^3.0.0",
     "zod": "^4.0.0"
   }
 }
