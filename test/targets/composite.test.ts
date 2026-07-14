@@ -10,6 +10,25 @@ describe("compositeTarget", () => {
     expect(compositeTarget.defaultExtension).toBe(".composite.json");
   });
 
+  it("surfaces introspection warnings through generate()", () => {
+    const schema = z.object({
+      name: z.string(),
+      lookup: z.map(z.string(), z.string()),
+    });
+
+    const result = generate({
+      schema,
+      formName: "WarnForm",
+      schemaImportPath: "./schema",
+      schemaExportName: "warnSchema",
+      target: compositeTarget,
+    });
+
+    expect(result.warnings.length).toBeGreaterThan(0);
+    expect(result.warnings.join("; ")).toContain("lookup");
+    expect(result.warnings.join("; ")).toContain("unsupported");
+  });
+
   it("outputs valid JSON", () => {
     const schema = z.object({
       name: z.string(),

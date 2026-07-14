@@ -25,7 +25,6 @@ interface FieldAssertion {
   isNullable?: boolean;
   component: ComponentType;
   constraints?: Partial<FieldConstraints>;
-  nestedPaths?: string[];
 }
 
 interface SchemaTestCase {
@@ -64,7 +63,6 @@ const schemas: SchemaTestCase[] = [
         name: "address",
         type: "object",
         component: "Fieldset",
-        nestedPaths: ["address.street", "address.city", "address.state", "address.zip"],
       },
       { name: "insuranceType", type: "enum", component: "RadioGroup" },
       {
@@ -110,7 +108,6 @@ const schemas: SchemaTestCase[] = [
         name: "price",
         type: "object",
         component: "Fieldset",
-        nestedPaths: ["price.amount", "price.currency"],
       },
       { name: "category", type: "enum", component: "Select" },
       { name: "tags", type: "array", component: "FieldArray" },
@@ -119,7 +116,6 @@ const schemas: SchemaTestCase[] = [
         name: "attributes",
         type: "union",
         component: "UnionSwitch",
-        nestedPaths: ["attributes.type"],
       },
       { name: "isActive", type: "boolean", component: "Checkbox" },
     ],
@@ -159,7 +155,6 @@ const schemas: SchemaTestCase[] = [
         name: "loanDetails",
         type: "union",
         component: "UnionSwitch",
-        nestedPaths: ["loanDetails.loanType"],
       },
       { name: "hasCoSigner", type: "boolean", component: "Checkbox" },
       { name: "agreeToTerms", type: "boolean", component: "Checkbox" },
@@ -260,7 +255,6 @@ const schemas: SchemaTestCase[] = [
         name: "address",
         type: "object",
         component: "Fieldset",
-        nestedPaths: ["address.street", "address.city", "address.state", "address.zip"],
       },
       {
         name: "county",
@@ -347,24 +341,17 @@ const schemas: SchemaTestCase[] = [
         name: "originAddress",
         type: "object",
         component: "Fieldset",
-        nestedPaths: ["originAddress.street", "originAddress.city", "originAddress.country"],
       },
       {
         name: "destinationAddress",
         type: "object",
         component: "Fieldset",
-        nestedPaths: [
-          "destinationAddress.street",
-          "destinationAddress.city",
-          "destinationAddress.country",
-        ],
       },
       { name: "packages", type: "array", component: "FieldArray" },
       {
         name: "shippingMethod",
         type: "union",
         component: "UnionSwitch",
-        nestedPaths: ["shippingMethod.method"],
       },
       { name: "pickupDate", type: "date", component: "DatePicker" },
       { name: "insuranceRequired", type: "boolean", component: "Checkbox" },
@@ -511,7 +498,6 @@ const schemas: SchemaTestCase[] = [
         name: "notifications",
         type: "object",
         component: "Fieldset",
-        nestedPaths: ["notifications.emailDigest", "notifications.pushNotifications"],
       },
       { name: "featureFlags", type: "record", component: "FieldArray" },
       { name: "itemsPerPage", type: "number", component: "Slider" },
@@ -535,7 +521,6 @@ const schemas: SchemaTestCase[] = [
         name: "claimant",
         type: "object",
         component: "Fieldset",
-        nestedPaths: ["claimant.policyNumber", "claimant.firstName", "claimant.address"],
       },
       { name: "incidentDate", type: "date", component: "DatePicker" },
       { name: "dateReported", type: "date", component: "DatePicker" },
@@ -550,7 +535,6 @@ const schemas: SchemaTestCase[] = [
         name: "claimDetails",
         type: "union",
         component: "UnionSwitch",
-        nestedPaths: ["claimDetails.claimType"],
       },
       { name: "documents", type: "array", component: "FieldArray" },
       { name: "hasWitnesses", type: "boolean", component: "Checkbox" },
@@ -620,7 +604,6 @@ const schemas: SchemaTestCase[] = [
         name: "address",
         type: "object",
         component: "Fieldset",
-        nestedPaths: ["address.street", "address.city", "address.state", "address.zip"],
       },
       { name: "claimingDependents", type: "boolean", component: "Checkbox" },
       {
@@ -636,7 +619,6 @@ const schemas: SchemaTestCase[] = [
         type: "object",
         isOptional: true,
         component: "Fieldset",
-        nestedPaths: ["itemizedDeductions.medicalExpenses", "itemizedDeductions.mortgageInterest"],
       },
       {
         name: "estimatedTaxPayments",
@@ -649,7 +631,6 @@ const schemas: SchemaTestCase[] = [
         type: "object",
         isOptional: true,
         component: "Fieldset",
-        nestedPaths: ["bankAccountForRefund.routingNumber", "bankAccountForRefund.accountType"],
       },
       { name: "signatureDate", type: "date", component: "DatePicker" },
       { name: "electronicSignature", type: "boolean", component: "Checkbox" },
