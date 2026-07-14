@@ -1,10 +1,6 @@
 import type { $ZodType } from "zod/v4/core";
 import { introspect } from "../introspection";
-import type {
-  CodegenTarget,
-  TargetOptions,
-  TargetOutputFile,
-} from "../targets/types";
+import type { CodegenTarget, TargetOptions, TargetOutputFile } from "../targets/types";
 
 export interface GenerateOptions {
   /** The Zod schema to generate from */
@@ -41,8 +37,7 @@ export interface GenerateResult {
  * Generates form artifacts from a Zod schema via the given target.
  */
 export function generate(options: GenerateOptions): GenerateResult {
-  const { schema, formName, schemaImportPath, schemaExportName, target } =
-    options;
+  const { schema, formName, schemaImportPath, schemaExportName, target } = options;
 
   const formDescriptor = introspect(schema, {
     formName,
@@ -50,10 +45,7 @@ export function generate(options: GenerateOptions): GenerateResult {
     schemaExportName,
   });
 
-  const targetResult = target.generate(
-    formDescriptor,
-    options.targetOptions ?? {},
-  );
+  const targetResult = target.generate(formDescriptor, options.targetOptions ?? {});
 
   return {
     files: targetResult.files,

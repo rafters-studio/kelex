@@ -10,9 +10,7 @@ export interface UnwrapResult {
 }
 
 /** Type guard to check if schema has unwrap method */
-function hasUnwrap(
-  schema: unknown,
-): schema is { unwrap: () => $ZodType } & $ZodType {
+function hasUnwrap(schema: unknown): schema is { unwrap: () => $ZodType } & $ZodType {
   return (
     typeof schema === "object" &&
     schema !== null &&

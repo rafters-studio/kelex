@@ -53,9 +53,7 @@ describe("round-trip: schema -> introspect -> writeSchema -> eval -> introspect"
     const { descriptor1, descriptor2 } = roundTrip(schema);
 
     expect(descriptor2.fields[0].constraints.format).toBe("email");
-    expect(descriptor2.fields[0].constraints.format).toBe(
-      descriptor1.fields[0].constraints.format,
-    );
+    expect(descriptor2.fields[0].constraints.format).toBe(descriptor1.fields[0].constraints.format);
   });
 
   it("round-trips url format", () => {
@@ -98,9 +96,7 @@ describe("round-trip: schema -> introspect -> writeSchema -> eval -> introspect"
     const { descriptor1, descriptor2 } = roundTrip(schema);
 
     expect(descriptor2.fields[0].constraints.isInt).toBe(true);
-    expect(descriptor2.fields[0].constraints.isInt).toBe(
-      descriptor1.fields[0].constraints.isInt,
-    );
+    expect(descriptor2.fields[0].constraints.isInt).toBe(descriptor1.fields[0].constraints.isInt);
   });
 
   it("round-trips a boolean field", () => {
@@ -130,9 +126,7 @@ describe("round-trip: schema -> introspect -> writeSchema -> eval -> introspect"
       descriptor2.fields[0].metadata.kind === "enum" &&
       descriptor1.fields[0].metadata.kind === "enum"
     ) {
-      expect(descriptor2.fields[0].metadata.values).toEqual(
-        descriptor1.fields[0].metadata.values,
-      );
+      expect(descriptor2.fields[0].metadata.values).toEqual(descriptor1.fields[0].metadata.values);
     }
   });
 
@@ -361,12 +355,8 @@ describe("round-trip: schema -> introspect -> writeSchema -> eval -> introspect"
       expect(f2.metadata.discriminator).toBe(f1.metadata.discriminator);
       expect(f2.metadata.variants).toHaveLength(f1.metadata.variants.length);
       for (let i = 0; i < f1.metadata.variants.length; i++) {
-        expect(f2.metadata.variants[i].value).toBe(
-          f1.metadata.variants[i].value,
-        );
-        expect(f2.metadata.variants[i].fields).toHaveLength(
-          f1.metadata.variants[i].fields.length,
-        );
+        expect(f2.metadata.variants[i].value).toBe(f1.metadata.variants[i].value);
+        expect(f2.metadata.variants[i].fields).toHaveLength(f1.metadata.variants[i].fields.length);
       }
     }
   });

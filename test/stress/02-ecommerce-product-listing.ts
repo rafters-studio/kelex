@@ -29,11 +29,7 @@ const digitalAttributes = z.object({
 
 export const productListingSchema = z.object({
   title: z.string().min(1).max(200).meta({ title: "Product title" }),
-  description: z
-    .string()
-    .min(10)
-    .max(5000)
-    .meta({ title: "Product description" }),
+  description: z.string().min(10).max(5000).meta({ title: "Product description" }),
   sku: z
     .string()
     .regex(/^[A-Z]{2,4}-\d{4,8}$/)
@@ -51,9 +47,6 @@ export const productListingSchema = z.object({
   ]),
   tags: z.array(z.string().min(1).max(50)).min(1).max(10),
   images: z.array(z.url()).min(1).max(20),
-  attributes: z.discriminatedUnion("type", [
-    physicalAttributes,
-    digitalAttributes,
-  ]),
+  attributes: z.discriminatedUnion("type", [physicalAttributes, digitalAttributes]),
   isActive: z.boolean(),
 });

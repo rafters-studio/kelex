@@ -11,12 +11,7 @@ const personalLoan = z.object({
     .regex(/^\d{3}-\d{2}-\d{4}$/)
     .meta({ title: "Social Security Number" }),
   annualIncome: z.number().min(0).max(10_000_000),
-  employmentStatus: z.enum([
-    "employed",
-    "self_employed",
-    "retired",
-    "unemployed",
-  ]),
+  employmentStatus: z.enum(["employed", "self_employed", "retired", "unemployed"]),
   employer: z.string().max(200).optional(),
   yearsEmployed: z.number().min(0).max(50).optional(),
 });
@@ -30,12 +25,7 @@ const businessLoan = z.object({
   businessName: z.string().min(1).max(200),
   annualRevenue: z.number().min(0),
   yearsInBusiness: z.number().min(0).max(200),
-  businessType: z.enum([
-    "sole_proprietorship",
-    "llc",
-    "corporation",
-    "partnership",
-  ]),
+  businessType: z.enum(["sole_proprietorship", "llc", "corporation", "partnership"]),
 });
 
 export const loanApplicationSchema = z
@@ -46,11 +36,7 @@ export const loanApplicationSchema = z
     phone: z.string().regex(/^\+?1?\d{10}$/),
     requestedAmount: z.number().min(1000).max(5_000_000),
     loanTerm: z.enum(["12", "24", "36", "48", "60", "84", "120"]),
-    purpose: z
-      .string()
-      .min(10)
-      .max(1000)
-      .meta({ title: "Purpose of the loan" }),
+    purpose: z.string().min(10).max(1000).meta({ title: "Purpose of the loan" }),
     loanDetails: z.discriminatedUnion("loanType", [personalLoan, businessLoan]),
     hasCoSigner: z.boolean(),
     agreeToTerms: z.boolean(),

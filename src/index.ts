@@ -1,7 +1,4 @@
-export type {
-  GenerateOptions,
-  GenerateResult,
-} from "./codegen";
+export type { GenerateOptions, GenerateResult } from "./codegen";
 
 export { generate } from "./codegen";
 
@@ -18,22 +15,11 @@ export type {
 
 export { extractConstraints, introspect, unwrapSchema } from "./introspection";
 
-export type {
-  ComponentConfig,
-  ComponentType,
-  MappingRule,
-} from "./mapping";
+export type { ComponentConfig, ComponentType, MappingRule } from "./mapping";
 
-export {
-  defaultMappingRules,
-  findMatchingRule,
-  resolveField,
-} from "./mapping";
+export { defaultMappingRules, findMatchingRule, resolveField } from "./mapping";
 
-export type {
-  SchemaWriterOptions,
-  SchemaWriterResult,
-} from "./schema-writer";
+export type { SchemaWriterOptions, SchemaWriterResult } from "./schema-writer";
 
 export { emitField, writeSchema } from "./schema-writer";
 

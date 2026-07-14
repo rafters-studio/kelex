@@ -47,11 +47,7 @@ describe("compositeTarget", () => {
     const parsed = JSON.parse(result.files[0].content);
 
     expect(parsed.fields).toHaveLength(3);
-    expect(parsed.fields.map((f: { name: string }) => f.name)).toEqual([
-      "name",
-      "email",
-      "active",
-    ]);
+    expect(parsed.fields.map((f: { name: string }) => f.name)).toEqual(["name", "email", "active"]);
   });
 
   it("preserves FormDescriptor structure", () => {

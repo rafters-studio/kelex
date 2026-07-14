@@ -48,14 +48,7 @@ describe("CLI", () => {
       const schemaPath = path.join(FIXTURES_PATH, "user-schema.ts");
       const outputPath = path.join(TEST_OUTPUT_DIR, "user.composite.json");
 
-      const result = runCli([
-        "generate",
-        schemaPath,
-        "-o",
-        outputPath,
-        "-s",
-        "userSchema",
-      ]);
+      const result = runCli(["generate", schemaPath, "-o", outputPath, "-s", "userSchema"]);
 
       expect(result).toContain("Generated");
       expect(result).toContain("9 fields");
@@ -76,10 +69,7 @@ describe("CLI", () => {
       expect(result).toContain("Generated");
 
       // Should create user-form.composite.json in fixtures dir
-      const expectedOutput = path.join(
-        FIXTURES_PATH,
-        "user-form.composite.json",
-      );
+      const expectedOutput = path.join(FIXTURES_PATH, "user-form.composite.json");
       expect(fs.existsSync(expectedOutput)).toBe(true);
 
       // Clean up
@@ -106,21 +96,13 @@ describe("CLI", () => {
     });
 
     it("shows error for non-existent file", () => {
-      const { stderr } = runCliWithError([
-        "generate",
-        "/nonexistent/schema.ts",
-      ]);
+      const { stderr } = runCliWithError(["generate", "/nonexistent/schema.ts"]);
       expect(stderr).toContain("Schema file not found");
     });
 
     it("shows error for missing schema export", () => {
       const schemaPath = path.join(FIXTURES_PATH, "user-schema.ts");
-      const { stderr } = runCliWithError([
-        "generate",
-        schemaPath,
-        "-s",
-        "nonExistentSchema",
-      ]);
+      const { stderr } = runCliWithError(["generate", schemaPath, "-s", "nonExistentSchema"]);
       expect(stderr).toContain("not exported");
     });
   });

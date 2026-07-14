@@ -27,16 +27,9 @@ export const contractIntakeSchema = z.object({
   ]),
   effectiveDate: z.date(),
   expirationDate: z.date().optional(),
-  contractValue: z
-    .number()
-    .min(0)
-    .meta({ title: "Total contract value in USD" }),
+  contractValue: z.number().min(0).meta({ title: "Total contract value in USD" }),
   jurisdiction: z.string().min(1).max(100),
-  governingLaw: z
-    .string()
-    .min(1)
-    .max(100)
-    .meta({ title: "Governing law state/jurisdiction" }),
+  governingLaw: z.string().min(1).max(100).meta({ title: "Governing law state/jurisdiction" }),
   counterpartyName: z.string().min(1).max(200),
   counterpartyEmail: z.email().nullish(),
   contractSummary: z
@@ -49,12 +42,7 @@ export const contractIntakeSchema = z.object({
     .max(5000)
     .nullish()
     .meta({ title: "Any special clauses or non-standard terms" }),
-  confidentialityLevel: z.enum([
-    "public",
-    "internal",
-    "confidential",
-    "restricted",
-  ]),
+  confidentialityLevel: z.enum(["public", "internal", "confidential", "restricted"]),
   requiresNotarization: z.boolean(),
   witnessRequired: z.boolean(),
   previousCaseNumber: z
@@ -62,9 +50,5 @@ export const contractIntakeSchema = z.object({
     .regex(/^\d{4}-[A-Z]{2}-\d{6}$/)
     .nullish()
     .meta({ title: "Related previous case number if any" }),
-  notes: z
-    .string()
-    .max(5000)
-    .nullish()
-    .meta({ title: "Internal notes for the legal team" }),
+  notes: z.string().max(5000).nullish().meta({ title: "Internal notes for the legal team" }),
 });

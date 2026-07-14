@@ -61,10 +61,7 @@ export const defaultMappingRules: MappingRule[] = [
   // 7. Enum (<=4 values) -> RadioGroup
   {
     name: "enum-radio-group",
-    match: (f) =>
-      f.type === "enum" &&
-      f.metadata.kind === "enum" &&
-      f.metadata.values.length <= 4,
+    match: (f) => f.type === "enum" && f.metadata.kind === "enum" && f.metadata.values.length <= 4,
     component: "RadioGroup",
     getProps: (f) => {
       if (f.metadata.kind === "enum") {

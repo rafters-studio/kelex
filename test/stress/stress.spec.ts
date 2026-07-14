@@ -64,12 +64,7 @@ const schemas: SchemaTestCase[] = [
         name: "address",
         type: "object",
         component: "Fieldset",
-        nestedPaths: [
-          "address.street",
-          "address.city",
-          "address.state",
-          "address.zip",
-        ],
+        nestedPaths: ["address.street", "address.city", "address.state", "address.zip"],
       },
       { name: "insuranceType", type: "enum", component: "RadioGroup" },
       {
@@ -265,12 +260,7 @@ const schemas: SchemaTestCase[] = [
         name: "address",
         type: "object",
         component: "Fieldset",
-        nestedPaths: [
-          "address.street",
-          "address.city",
-          "address.state",
-          "address.zip",
-        ],
+        nestedPaths: ["address.street", "address.city", "address.state", "address.zip"],
       },
       {
         name: "county",
@@ -357,11 +347,7 @@ const schemas: SchemaTestCase[] = [
         name: "originAddress",
         type: "object",
         component: "Fieldset",
-        nestedPaths: [
-          "originAddress.street",
-          "originAddress.city",
-          "originAddress.country",
-        ],
+        nestedPaths: ["originAddress.street", "originAddress.city", "originAddress.country"],
       },
       {
         name: "destinationAddress",
@@ -525,10 +511,7 @@ const schemas: SchemaTestCase[] = [
         name: "notifications",
         type: "object",
         component: "Fieldset",
-        nestedPaths: [
-          "notifications.emailDigest",
-          "notifications.pushNotifications",
-        ],
+        nestedPaths: ["notifications.emailDigest", "notifications.pushNotifications"],
       },
       { name: "featureFlags", type: "record", component: "FieldArray" },
       { name: "itemsPerPage", type: "number", component: "Slider" },
@@ -552,11 +535,7 @@ const schemas: SchemaTestCase[] = [
         name: "claimant",
         type: "object",
         component: "Fieldset",
-        nestedPaths: [
-          "claimant.policyNumber",
-          "claimant.firstName",
-          "claimant.address",
-        ],
+        nestedPaths: ["claimant.policyNumber", "claimant.firstName", "claimant.address"],
       },
       { name: "incidentDate", type: "date", component: "DatePicker" },
       { name: "dateReported", type: "date", component: "DatePicker" },
@@ -641,12 +620,7 @@ const schemas: SchemaTestCase[] = [
         name: "address",
         type: "object",
         component: "Fieldset",
-        nestedPaths: [
-          "address.street",
-          "address.city",
-          "address.state",
-          "address.zip",
-        ],
+        nestedPaths: ["address.street", "address.city", "address.state", "address.zip"],
       },
       { name: "claimingDependents", type: "boolean", component: "Checkbox" },
       {
@@ -662,10 +636,7 @@ const schemas: SchemaTestCase[] = [
         type: "object",
         isOptional: true,
         component: "Fieldset",
-        nestedPaths: [
-          "itemizedDeductions.medicalExpenses",
-          "itemizedDeductions.mortgageInterest",
-        ],
+        nestedPaths: ["itemizedDeductions.medicalExpenses", "itemizedDeductions.mortgageInterest"],
       },
       {
         name: "estimatedTaxPayments",
@@ -678,10 +649,7 @@ const schemas: SchemaTestCase[] = [
         type: "object",
         isOptional: true,
         component: "Fieldset",
-        nestedPaths: [
-          "bankAccountForRefund.routingNumber",
-          "bankAccountForRefund.accountType",
-        ],
+        nestedPaths: ["bankAccountForRefund.routingNumber", "bankAccountForRefund.accountType"],
       },
       { name: "signatureDate", type: "date", component: "DatePicker" },
       { name: "electronicSignature", type: "boolean", component: "Checkbox" },
@@ -720,9 +688,7 @@ describe("Stress test: complex Zod v4 schemas", () => {
         }
 
         console.log(`[ROUND-TRIP] ${testCase.name}`);
-        console.log(
-          `  Fields: ${descriptor1.fields.map((f) => f.name).join(", ")}`,
-        );
+        console.log(`  Fields: ${descriptor1.fields.map((f) => f.name).join(", ")}`);
         console.log(`  Field count: ${descriptor1.fields.length}`);
       });
 
@@ -735,21 +701,15 @@ describe("Stress test: complex Zod v4 schemas", () => {
         expect(descriptor.fields).toHaveLength(testCase.expectedFields.length);
 
         for (const expected of testCase.expectedFields) {
-          const actual = descriptor.fields.find(
-            (f) => f.name === expected.name,
-          );
+          const actual = descriptor.fields.find((f) => f.name === expected.name);
           expect(actual, `missing field: ${expected.name}`).toBeDefined();
           expect(actual?.type, `${expected.name} type`).toBe(expected.type);
 
           if (expected.isOptional !== undefined) {
-            expect(actual?.isOptional, `${expected.name} isOptional`).toBe(
-              expected.isOptional,
-            );
+            expect(actual?.isOptional, `${expected.name} isOptional`).toBe(expected.isOptional);
           }
           if (expected.isNullable !== undefined) {
-            expect(actual?.isNullable, `${expected.name} isNullable`).toBe(
-              expected.isNullable,
-            );
+            expect(actual?.isNullable, `${expected.name} isNullable`).toBe(expected.isNullable);
           }
           if (expected.constraints) {
             for (const [key, value] of Object.entries(expected.constraints)) {
@@ -770,17 +730,13 @@ describe("Stress test: complex Zod v4 schemas", () => {
 
         for (const expected of testCase.expectedFields) {
           const field = descriptor.fields.find((f) => f.name === expected.name);
-          expect(
-            field,
-            `missing field for component mapping: ${expected.name}`,
-          ).toBeDefined();
+          expect(field, `missing field for component mapping: ${expected.name}`).toBeDefined();
           if (!field) continue;
 
           const config = resolveField(field);
-          expect(
-            config.component,
-            `${expected.name} -> ${expected.component}`,
-          ).toBe(expected.component);
+          expect(config.component, `${expected.name} -> ${expected.component}`).toBe(
+            expected.component,
+          );
         }
       });
     });

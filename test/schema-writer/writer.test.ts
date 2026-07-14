@@ -27,9 +27,7 @@ describe("writeSchema", () => {
         fields: [makeField({ name: "name" })],
       });
       const result = writeSchema({ form });
-      expect(result.code).toContain(
-        "export type User = z.infer<typeof userSchema>;",
-      );
+      expect(result.code).toContain("export type User = z.infer<typeof userSchema>;");
     });
 
     it("generates type name from profileSchema -> Profile", () => {
@@ -38,9 +36,7 @@ describe("writeSchema", () => {
         fields: [makeField({ name: "bio" })],
       });
       const result = writeSchema({ form });
-      expect(result.code).toContain(
-        "export type Profile = z.infer<typeof profileSchema>;",
-      );
+      expect(result.code).toContain("export type Profile = z.infer<typeof profileSchema>;");
     });
 
     it("returns empty warnings when all fields succeed", () => {
@@ -123,9 +119,7 @@ describe("writeSchema", () => {
       expect(result.code).toContain("active: z.boolean(),");
       expect(result.code).toContain('role: z.enum(["admin", "user"]),');
       expect(result.code).toContain("tags: z.array(z.string()),");
-      expect(result.code).toContain(
-        "export type Contact = z.infer<typeof contactSchema>;",
-      );
+      expect(result.code).toContain("export type Contact = z.infer<typeof contactSchema>;");
     });
 
     it("emits record type through writer", () => {
@@ -176,9 +170,7 @@ describe("writeSchema", () => {
         ],
       });
       const result = writeSchema({ form });
-      expect(result.code).toContain(
-        "coord: z.tuple([z.string(), z.number()]),",
-      );
+      expect(result.code).toContain("coord: z.tuple([z.string(), z.number()]),");
     });
   });
 
@@ -208,9 +200,7 @@ describe("writeSchema", () => {
         ],
       });
       const result = writeSchema({ form });
-      expect(result.code).toContain(
-        "address: z.object({ street: z.string(), city: z.string() }),",
-      );
+      expect(result.code).toContain("address: z.object({ street: z.string(), city: z.string() }),");
     });
   });
 
@@ -225,9 +215,7 @@ describe("writeSchema", () => {
           }),
         ],
       });
-      expect(() => writeSchema({ form })).toThrow(
-        'Unsupported field type "unknown"',
-      );
+      expect(() => writeSchema({ form })).toThrow('Unsupported field type "unknown"');
     });
   });
 
@@ -289,12 +277,8 @@ describe("writeSchema", () => {
       expect(addressIdx).toBeLessThan(userIdx);
 
       // Type exports for both
-      expect(result.code).toContain(
-        "export type Address = z.infer<typeof addressSchema>;",
-      );
-      expect(result.code).toContain(
-        "export type User = z.infer<typeof userSchema>;",
-      );
+      expect(result.code).toContain("export type Address = z.infer<typeof addressSchema>;");
+      expect(result.code).toContain("export type User = z.infer<typeof userSchema>;");
 
       // Field uses identifier instead of inline
       expect(result.code).toContain("address: addressSchema,");
@@ -357,15 +341,9 @@ describe("writeSchema", () => {
       expect(phoneIdx).toBeLessThan(contactIdx);
 
       // Type exports for all three
-      expect(result.code).toContain(
-        "export type Address = z.infer<typeof addressSchema>;",
-      );
-      expect(result.code).toContain(
-        "export type Phone = z.infer<typeof phoneSchema>;",
-      );
-      expect(result.code).toContain(
-        "export type Contact = z.infer<typeof contactSchema>;",
-      );
+      expect(result.code).toContain("export type Address = z.infer<typeof addressSchema>;");
+      expect(result.code).toContain("export type Phone = z.infer<typeof phoneSchema>;");
+      expect(result.code).toContain("export type Contact = z.infer<typeof contactSchema>;");
     });
 
     it("topologically sorts nested embedded schemas (A references B)", () => {
@@ -495,9 +473,7 @@ describe("writeSchema", () => {
       expect(result.code).toContain('import { z } from "zod/v4";');
       expect(result.code).toContain("export const userSchema = z.object({");
       expect(result.code).toContain("  name: z.string(),");
-      expect(result.code).toContain(
-        "export type User = z.infer<typeof userSchema>;",
-      );
+      expect(result.code).toContain("export type User = z.infer<typeof userSchema>;");
       expect(result.warnings).toEqual([]);
     });
 

@@ -15,14 +15,7 @@ const workExperience = z.object({
 
 const educationEntry = z.object({
   institution: z.string().min(1).max(200),
-  degree: z.enum([
-    "high_school",
-    "associate",
-    "bachelor",
-    "master",
-    "doctorate",
-    "other",
-  ]),
+  degree: z.enum(["high_school", "associate", "bachelor", "master", "doctorate", "other"]),
   fieldOfStudy: z.string().max(100).optional(),
   graduationYear: z.number().min(1950).max(2030),
 });
@@ -32,26 +25,12 @@ export const jobApplicationSchema = z.object({
   lastName: z.string().min(1).max(50),
   email: z.email(),
   phone: z.string().min(10).max(20),
-  linkedinUrl: z
-    .url()
-    .nullable()
-    .optional()
-    .meta({ title: "LinkedIn profile URL" }),
-  portfolioUrl: z
-    .url()
-    .nullable()
-    .optional()
-    .meta({ title: "Portfolio website" }),
+  linkedinUrl: z.url().nullable().optional().meta({ title: "LinkedIn profile URL" }),
+  portfolioUrl: z.url().nullable().optional().meta({ title: "Portfolio website" }),
   positionApplied: z.string().min(1).max(100),
   desiredSalary: z.number().min(0).optional(),
   availableStartDate: z.date(),
-  educationLevel: z.enum([
-    "high_school",
-    "associate",
-    "bachelor",
-    "master",
-    "doctorate",
-  ]),
+  educationLevel: z.enum(["high_school", "associate", "bachelor", "master", "doctorate"]),
   education: z.array(educationEntry).min(1),
   workExperience: z.array(workExperience),
   coverLetter: z

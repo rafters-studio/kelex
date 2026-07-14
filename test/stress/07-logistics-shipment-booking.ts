@@ -69,11 +69,7 @@ export const shipmentBookingSchema = z.object({
     postalCode: z.string().min(3).max(10),
   }),
   packages: z.array(packageItem).min(1).max(100),
-  shippingMethod: z.discriminatedUnion("method", [
-    groundShipping,
-    airShipping,
-    seaShipping,
-  ]),
+  shippingMethod: z.discriminatedUnion("method", [groundShipping, airShipping, seaShipping]),
   pickupDate: z.date(),
   insuranceRequired: z.boolean(),
   specialInstructions: z.string().max(2000).optional(),

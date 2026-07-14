@@ -188,9 +188,7 @@ function emitTuple(field: FieldDescriptor): string {
     );
   }
 
-  const elements = field.metadata.elements
-    .map((el) => emitField(el))
-    .join(", ");
+  const elements = field.metadata.elements.map((el) => emitField(el)).join(", ");
   return `z.tuple([${elements}])`;
 }
 
@@ -202,9 +200,7 @@ function emitObject(field: FieldDescriptor): string {
   }
 
   const entries = field.metadata.fields.map((child) => {
-    const key = VALID_IDENTIFIER.test(child.name)
-      ? child.name
-      : JSON.stringify(child.name);
+    const key = VALID_IDENTIFIER.test(child.name) ? child.name : JSON.stringify(child.name);
     return `${key}: ${emitField(child)}`;
   });
   return `z.object({ ${entries.join(", ")} })`;
@@ -255,9 +251,7 @@ function emitDiscriminatedUnion(
   return `z.discriminatedUnion(${JSON.stringify(discriminator)}, [${variantExprs.join(", ")}])`;
 }
 
-function emitPlainUnion(
-  variants: { value: string; fields: FieldDescriptor[] }[],
-): string {
+function emitPlainUnion(variants: { value: string; fields: FieldDescriptor[] }[]): string {
   const optionExprs = variants.map((variant) => {
     // Heuristic: the introspector wraps non-object union members in synthetic
     // single-field objects named "variant_N" / "option_N" (see introspect.ts
@@ -272,9 +266,7 @@ function emitPlainUnion(
       return emitField(variant.fields[0]);
     }
 
-    const entries = variant.fields.map(
-      (child) => `${child.name}: ${emitField(child)}`,
-    );
+    const entries = variant.fields.map((child) => `${child.name}: ${emitField(child)}`);
     return `z.object({ ${entries.join(", ")} })`;
   });
 

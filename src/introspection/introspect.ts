@@ -1,11 +1,6 @@
 import type { $ZodType } from "zod/v4/core";
 import { extractConstraints } from "./checks";
-import type {
-  FieldDescriptor,
-  FieldMetadata,
-  FieldType,
-  FormDescriptor,
-} from "./types";
+import type { FieldDescriptor, FieldMetadata, FieldType, FormDescriptor } from "./types";
 import { unwrapSchema } from "./unwrap";
 
 export interface IntrospectOptions {
@@ -62,13 +57,7 @@ interface ZodLiteralDef {
 
 const SCALAR_TYPES = ["string", "number", "boolean", "date", "enum"] as const;
 
-const COMPOSITE_TYPES = [
-  "object",
-  "array",
-  "union",
-  "tuple",
-  "record",
-] as const;
+const COMPOSITE_TYPES = ["object", "array", "union", "tuple", "record"] as const;
 
 type ScalarType = (typeof SCALAR_TYPES)[number];
 type CompositeType = (typeof COMPOSITE_TYPES)[number];
@@ -181,19 +170,13 @@ function buildMetadata(inner: $ZodType, warnings: string[]): FieldMetadata {
 
   if (type === "tuple") {
     const tupDef = def as unknown as ZodTupleDef;
-    const elements = tupDef.items.map((item, i) =>
-      introspectField(String(i), item, warnings),
-    );
+    const elements = tupDef.items.map((item, i) => introspectField(String(i), item, warnings));
     return { kind: "tuple", elements };
   }
 
   if (type === "record") {
     const recDef = def as unknown as ZodRecordDef;
-    const valueDescriptor = introspectField(
-      "value",
-      recDef.valueType,
-      warnings,
-    );
+    const valueDescriptor = introspectField("value", recDef.valueType, warnings);
     return { kind: "record", valueDescriptor };
   }
 
@@ -203,10 +186,7 @@ function buildMetadata(inner: $ZodType, warnings: string[]): FieldMetadata {
 /**
  * Builds union metadata, detecting discriminated unions.
  */
-function buildUnionMetadata(
-  def: ZodUnionDef,
-  warnings: string[],
-): FieldMetadata {
+function buildUnionMetadata(def: ZodUnionDef, warnings: string[]): FieldMetadata {
   const discriminator = def.discriminator;
   const variants: { value: string; fields: FieldDescriptor[] }[] = [];
 
@@ -234,11 +214,7 @@ function buildUnionMetadata(
       variants.push({ value: `variant_${variants.length}`, fields });
     } else {
       // Non-object union option -- wrap as a single-field variant
-      const field = introspectField(
-        `option_${variants.length}`,
-        option,
-        warnings,
-      );
+      const field = introspectField(`option_${variants.length}`, option, warnings);
       variants.push({
         value: `variant_${variants.length}`,
         fields: [field],
@@ -256,10 +232,7 @@ function buildUnionMetadata(
 /**
  * Introspects all fields in an object shape.
  */
-function introspectShape(
-  shape: Record<string, $ZodType>,
-  warnings: string[],
-): FieldDescriptor[] {
+function introspectShape(shape: Record<string, $ZodType>, warnings: string[]): FieldDescriptor[] {
   const fields: FieldDescriptor[] = [];
 
   for (const [name, fieldSchema] of Object.entries(shape)) {
@@ -307,19 +280,13 @@ function resolveType(inner: $ZodType): string {
 /**
  * Introspects a single field schema into a FieldDescriptor.
  */
-function introspectField(
-  name: string,
-  fieldSchema: $ZodType,
-  warnings: string[],
-): FieldDescriptor {
+function introspectField(name: string, fieldSchema: $ZodType, warnings: string[]): FieldDescriptor {
   const { inner, isOptional, isNullable } = unwrapSchema(fieldSchema);
   const type = resolveType(inner);
 
   // Check if it's a supported type
   if (!isScalarType(type) && !isCompositeType(type)) {
-    warnings.push(
-      `Field "${name}": unsupported type "${type}", treating as string`,
-    );
+    warnings.push(`Field "${name}": unsupported type "${type}", treating as string`);
     return {
       name,
       label: nameToLabel(name),
@@ -357,10 +324,7 @@ function introspectField(
  * Introspects a Zod object schema and returns a FormDescriptor.
  * Accepts z.object(), z.intersection(), and z.object().check() at the top level.
  */
-export function introspect(
-  schema: $ZodType,
-  options: IntrospectOptions,
-): FormDescriptor {
+export function introspect(schema: $ZodType, options: IntrospectOptions): FormDescriptor {
   const warnings: string[] = [];
 
   // Resolve root schema (handles intersection -> merged object)
@@ -370,9 +334,7 @@ export function introspect(
   const def = resolved._zod.def as ZodObjectDef;
 
   if (def.type !== "object") {
-    throw new Error(
-      `kelex only supports z.object() schemas at the top level, got "${def.type}"`,
-    );
+    throw new Error(`kelex only supports z.object() schemas at the top level, got "${def.type}"`);
   }
 
   const fields = introspectShape(def.shape, warnings);

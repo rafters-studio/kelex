@@ -8,14 +8,7 @@ const dependent = z.object({
   firstName: z.string().min(1).max(50),
   lastName: z.string().min(1).max(50),
   ssn: z.string().regex(/^\d{3}-\d{2}-\d{4}$/),
-  relationship: z.enum([
-    "child",
-    "stepchild",
-    "foster_child",
-    "sibling",
-    "parent",
-    "other",
-  ]),
+  relationship: z.enum(["child", "stepchild", "foster_child", "sibling", "parent", "other"]),
   dateOfBirth: z.date(),
   monthsLivedWithYou: z.int().min(0).max(12),
 });
@@ -82,11 +75,7 @@ export const taxFilingSchema = z
     claimingDependents: z.boolean(),
     dependents: z.array(dependent).optional(),
     incomeSources: z.array(
-      z.discriminatedUnion("sourceType", [
-        w2Income,
-        selfEmploymentIncome,
-        investmentIncome,
-      ]),
+      z.discriminatedUnion("sourceType", [w2Income, selfEmploymentIncome, investmentIncome]),
     ),
     standardDeduction: z.boolean(),
     itemizedDeductions: z
@@ -131,10 +120,7 @@ export const taxFilingSchema = z
       }
     }
 
-    if (
-      data.claimingDependents &&
-      (!data.dependents || data.dependents.length === 0)
-    ) {
+    if (data.claimingDependents && (!data.dependents || data.dependents.length === 0)) {
       ctx.issues.push({
         code: "custom",
         message: "Must list at least one dependent when claiming dependents",
@@ -146,8 +132,7 @@ export const taxFilingSchema = z
     if (!data.standardDeduction && !data.itemizedDeductions) {
       ctx.issues.push({
         code: "custom",
-        message:
-          "Must provide itemized deductions if not taking standard deduction",
+        message: "Must provide itemized deductions if not taking standard deduction",
         path: ["itemizedDeductions"],
         input: data,
       });

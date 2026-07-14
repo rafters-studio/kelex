@@ -1,10 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { FieldDescriptor } from "../../src/introspection";
-import type {
-  ComponentConfig,
-  ComponentType,
-  MappingRule,
-} from "../../src/mapping";
+import type { ComponentConfig, ComponentType, MappingRule } from "../../src/mapping";
 
 describe("Mapping Types", () => {
   describe("ComponentType", () => {

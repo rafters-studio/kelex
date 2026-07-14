@@ -97,13 +97,7 @@ describe("resolveField", () => {
       const config = resolveField(field);
 
       expect(config.component).toBe("Select");
-      expect(config.componentProps.options).toEqual([
-        "US",
-        "UK",
-        "CA",
-        "DE",
-        "FR",
-      ]);
+      expect(config.componentProps.options).toEqual(["US", "UK", "CA", "DE", "FR"]);
     });
 
     it("resolves date to DatePicker", () => {
@@ -186,9 +180,7 @@ describe("resolveField", () => {
 
       const config = resolveField(field);
 
-      expect(config.fieldProps.description).toBe(
-        "Add any additional notes here",
-      );
+      expect(config.fieldProps.description).toBe("Add any additional notes here");
     });
 
     it("omits description in fieldProps when not present", () => {

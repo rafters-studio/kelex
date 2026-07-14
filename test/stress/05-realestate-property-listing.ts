@@ -7,11 +7,7 @@ import { z } from "zod/v4";
 const baseListing = z.object({
   title: z.string().min(5).max(200),
   description: z.string().min(20).max(5000),
-  price: z
-    .number()
-    .min(0)
-    .multipleOf(1000)
-    .meta({ title: "Listing price in USD" }),
+  price: z.number().min(0).multipleOf(1000).meta({ title: "Listing price in USD" }),
   propertyType: z.enum(["house", "condo", "townhouse", "land", "commercial"]),
   status: z.enum(["active", "pending", "sold", "withdrawn"]),
   listedDate: z.date(),
@@ -42,6 +38,4 @@ const propertyDetails = z.object({
   hoaFee: z.number().min(0).optional().meta({ title: "Monthly HOA fee" }),
 });
 
-export const propertyListingSchema = baseListing
-  .and(locationDetails)
-  .and(propertyDetails);
+export const propertyListingSchema = baseListing.and(locationDetails).and(propertyDetails);
