@@ -35,12 +35,12 @@ pnpx @rafters-studio/kelex@latest generate <schema-path> [options]
 
 ### Options
 
-| Option | Description | Default |
-|--------|-------------|---------|
-| `-o, --output <path>` | Output file path | Derived from schema path |
-| `-n, --name <name>` | Form component name | Derived from schema name |
-| `-s, --schema <name>` | Exported schema name | `schema` |
-| `--ui <path>` | UI component import path | Generates built-in primitives |
+| Option                | Description              | Default                       |
+| --------------------- | ------------------------ | ----------------------------- |
+| `-o, --output <path>` | Output file path         | Derived from schema path      |
+| `-n, --name <name>`   | Form component name      | Derived from schema name      |
+| `-s, --schema <name>` | Exported schema name     | `schema`                      |
+| `--ui <path>`         | UI component import path | Generates built-in primitives |
 
 ### Examples
 
@@ -64,41 +64,41 @@ pnpx @rafters-studio/kelex@latest generate ./src/schemas/user.ts \
 
 ### Scalar Types
 
-| Zod Type | Component | Notes |
-|----------|-----------|-------|
-| `z.string()` | Input | `type="text"` |
-| `z.string().email()` | Input | `type="email"` |
-| `z.string().url()` | Input | `type="url"` |
-| `z.string().max(n)` | Textarea | When `n > 100` |
-| `z.number()` | Input | `type="number"` |
-| `z.number().min(a).max(b)` | Slider | When range `b - a <= 100` |
-| `z.boolean()` | Checkbox | |
-| `z.enum([...])` | RadioGroup | When `<= 4` options |
-| `z.enum([...])` | Select | When `> 4` options |
-| `z.date()` | DatePicker | |
+| Zod Type                   | Component  | Notes                     |
+| -------------------------- | ---------- | ------------------------- |
+| `z.string()`               | Input      | `type="text"`             |
+| `z.string().email()`       | Input      | `type="email"`            |
+| `z.string().url()`         | Input      | `type="url"`              |
+| `z.string().max(n)`        | Textarea   | When `n > 100`            |
+| `z.number()`               | Input      | `type="number"`           |
+| `z.number().min(a).max(b)` | Slider     | When range `b - a <= 100` |
+| `z.boolean()`              | Checkbox   |                           |
+| `z.enum([...])`            | RadioGroup | When `<= 4` options       |
+| `z.enum([...])`            | Select     | When `> 4` options        |
+| `z.date()`                 | DatePicker |                           |
 
 ### Composite Types
 
-| Zod Type | Rendering | Notes |
-|----------|-----------|-------|
-| `z.object({...})` | Card with nested fields | Recursive |
-| `z.array(z.string())` | Dynamic list with add/remove | Simple arrays |
-| `z.array(z.object({...}))` | Card per item with nested fields | Array of objects |
-| `z.discriminatedUnion(...)` | Select discriminator + conditional fields | |
-| `z.tuple([...])` | Card with indexed fields | |
-| `z.record(z.string(), ...)` | Key-value pair list | |
-| `z.intersection(a, b)` / `.and()` | Merged into single object | Top-level only |
+| Zod Type                          | Rendering                                 | Notes            |
+| --------------------------------- | ----------------------------------------- | ---------------- |
+| `z.object({...})`                 | Card with nested fields                   | Recursive        |
+| `z.array(z.string())`             | Dynamic list with add/remove              | Simple arrays    |
+| `z.array(z.object({...}))`        | Card per item with nested fields          | Array of objects |
+| `z.discriminatedUnion(...)`       | Select discriminator + conditional fields |                  |
+| `z.tuple([...])`                  | Card with indexed fields                  |                  |
+| `z.record(z.string(), ...)`       | Key-value pair list                       |                  |
+| `z.intersection(a, b)` / `.and()` | Merged into single object                 | Top-level only   |
 
 ### Modifiers
 
-| Modifier | Effect |
-|----------|--------|
-| `z.optional(...)` | Marks field as not required |
-| `z.nullable(...)` | Sets `isNullable` on field descriptor |
-| `z.nullish(...)` | Optional + nullable |
-| `.brand(...)` | Transparent (no effect on form) |
+| Modifier                      | Effect                                 |
+| ----------------------------- | -------------------------------------- |
+| `z.optional(...)`             | Marks field as not required            |
+| `z.nullable(...)`             | Sets `isNullable` on field descriptor  |
+| `z.nullish(...)`              | Optional + nullable                    |
+| `.brand(...)`                 | Transparent (no effect on form)        |
 | `.check()` / `.superRefine()` | Validation preserved, no layout effect |
-| `z.pipe()` / `.transform()` | Uses input type for form field |
+| `z.pipe()` / `.transform()`   | Uses input type for form field         |
 
 ## Example
 
@@ -140,10 +140,10 @@ const result = generate({
   // omit uiImportPath to get built-in primitives
 });
 
-result.code;       // Generated form component TSX
+result.code; // Generated form component TSX
 result.primitives; // Built-in UI components TSX (undefined when uiImportPath is set)
-result.fields;     // ["name", "email", "age", ...]
-result.warnings;   // Any issues encountered
+result.fields; // ["name", "email", "age", ...]
+result.warnings; // Any issues encountered
 ```
 
 Pass `uiImportPath` to use your own components and skip primitives generation:

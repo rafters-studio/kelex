@@ -1,4 +1,3 @@
 allowBuilds:
   lefthook: true
-  esbuild: true
-  rolldown: true
+  rolldown: false
