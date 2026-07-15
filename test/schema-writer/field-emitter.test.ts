@@ -237,9 +237,7 @@ describe("emitField", () => {
           ],
         },
       });
-      expect(emitField(field)).toBe(
-        "z.tuple([z.string(), z.number(), z.boolean()])",
-      );
+      expect(emitField(field)).toBe("z.tuple([z.string(), z.number(), z.boolean()])");
     });
 
     it("emits z.tuple() with constrained elements", () => {
@@ -263,9 +261,7 @@ describe("emitField", () => {
           ],
         },
       });
-      expect(emitField(field)).toBe(
-        "z.tuple([z.string().min(1), z.number().min(0).max(100)])",
-      );
+      expect(emitField(field)).toBe("z.tuple([z.string().min(1), z.number().min(0).max(100)])");
     });
 
     it("emits z.tuple().optional() for optional tuple", () => {
@@ -288,9 +284,7 @@ describe("emitField", () => {
           ],
         },
       });
-      expect(emitField(field)).toBe(
-        "z.tuple([z.string(), z.number()]).optional()",
-      );
+      expect(emitField(field)).toBe("z.tuple([z.string(), z.number()]).optional()");
     });
 
     it("emits z.tuple().nullable() for nullable tuple", () => {
@@ -340,9 +334,7 @@ describe("emitField", () => {
           }),
         },
       });
-      expect(emitField(field)).toBe(
-        'z.record(z.string(), z.enum(["low", "medium", "high"]))',
-      );
+      expect(emitField(field)).toBe('z.record(z.string(), z.enum(["low", "medium", "high"]))');
     });
 
     it("emits optional record", () => {
@@ -358,9 +350,7 @@ describe("emitField", () => {
           }),
         },
       });
-      expect(emitField(field)).toBe(
-        "z.record(z.string(), z.string()).optional()",
-      );
+      expect(emitField(field)).toBe("z.record(z.string(), z.string()).optional()");
     });
 
     it("throws when metadata kind does not match record type", () => {
@@ -422,9 +412,7 @@ describe("emitField", () => {
         description: "Age in years",
         metadata: { kind: "number" },
       });
-      expect(emitField(field)).toBe(
-        'z.number().nullable().optional().describe("Age in years")',
-      );
+      expect(emitField(field)).toBe('z.number().nullable().optional().describe("Age in years")');
     });
 
     it("escapes special characters in description", () => {
@@ -433,9 +421,7 @@ describe("emitField", () => {
         description: 'Uses "quotes" and \\backslashes',
         metadata: { kind: "string" },
       });
-      expect(emitField(field)).toBe(
-        'z.string().describe("Uses \\"quotes\\" and \\\\backslashes")',
-      );
+      expect(emitField(field)).toBe('z.string().describe("Uses \\"quotes\\" and \\\\backslashes")');
     });
   });
 
@@ -459,9 +445,7 @@ describe("emitField", () => {
           ],
         },
       });
-      expect(emitField(field)).toBe(
-        "z.object({ street: z.string(), city: z.string() })",
-      );
+      expect(emitField(field)).toBe("z.object({ street: z.string(), city: z.string() })");
     });
 
     it("emits z.object() with constrained children", () => {
@@ -513,9 +497,7 @@ describe("emitField", () => {
           ],
         },
       });
-      expect(emitField(field)).toBe(
-        "z.object({ inner: z.object({ value: z.string() }) })",
-      );
+      expect(emitField(field)).toBe("z.object({ inner: z.object({ value: z.string() }) })");
     });
 
     it("wraps with .optional() on optional nested object", () => {
@@ -609,9 +591,7 @@ describe("emitField", () => {
           }),
         },
       });
-      expect(emitField(field)).toBe(
-        "z.array(z.object({ id: z.number(), label: z.string() }))",
-      );
+      expect(emitField(field)).toBe("z.array(z.object({ id: z.number(), label: z.string() }))");
     });
   });
 
@@ -687,9 +667,7 @@ describe("emitField", () => {
         metadata: { kind: "object", fields: [] },
         schemaRef: "foo bar",
       });
-      expect(() => emitField(field)).toThrow(
-        'Invalid schemaRef "foo bar" for field "address"',
-      );
+      expect(() => emitField(field)).toThrow('Invalid schemaRef "foo bar" for field "address"');
     });
 
     it("throws on schemaRef with special characters", () => {
@@ -699,9 +677,7 @@ describe("emitField", () => {
         metadata: { kind: "object", fields: [] },
         schemaRef: "foo;bar",
       });
-      expect(() => emitField(field)).toThrow(
-        'Invalid schemaRef "foo;bar" for field "address"',
-      );
+      expect(() => emitField(field)).toThrow('Invalid schemaRef "foo;bar" for field "address"');
     });
 
     it("throws on schemaRef starting with a digit", () => {
@@ -711,9 +687,7 @@ describe("emitField", () => {
         metadata: { kind: "object", fields: [] },
         schemaRef: "1schema",
       });
-      expect(() => emitField(field)).toThrow(
-        'Invalid schemaRef "1schema" for field "address"',
-      );
+      expect(() => emitField(field)).toThrow('Invalid schemaRef "1schema" for field "address"');
     });
   });
 
@@ -993,9 +967,7 @@ describe("emitField", () => {
         type: "unknown" as "string",
         metadata: { kind: "string" },
       });
-      expect(() => emitField(field)).toThrow(
-        'Unsupported field type "unknown"',
-      );
+      expect(() => emitField(field)).toThrow('Unsupported field type "unknown"');
     });
   });
 });

@@ -137,15 +137,11 @@ describe("unwrapSchema", () => {
 
   it("throws for malformed schema with _zod but no def", () => {
     const malformed = { _zod: {} } as unknown as z.ZodType;
-    expect(() => unwrapSchema(malformed)).toThrow(
-      "Schema is not a valid Zod 4 schema",
-    );
+    expect(() => unwrapSchema(malformed)).toThrow("Schema is not a valid Zod 4 schema");
   });
 
   it("throws for malformed schema with _zod.def but no type", () => {
     const malformed = { _zod: { def: {} } } as unknown as z.ZodType;
-    expect(() => unwrapSchema(malformed)).toThrow(
-      "Schema is not a valid Zod 4 schema",
-    );
+    expect(() => unwrapSchema(malformed)).toThrow("Schema is not a valid Zod 4 schema");
   });
 });

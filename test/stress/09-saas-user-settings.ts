@@ -28,11 +28,7 @@ export const userSettingsSchema = z.object({
   avatarUrl: z.url().optional(),
   theme: z.enum(["light", "dark", "system"]),
   locale: z.enum(["en", "es", "fr", "de", "ja", "zh", "ko", "pt", "ar"]),
-  timezone: z
-    .string()
-    .min(1)
-    .max(50)
-    .meta({ title: "IANA timezone identifier" }),
+  timezone: z.string().min(1).max(50).meta({ title: "IANA timezone identifier" }),
   dateFormat: z.enum(["MM/DD/YYYY", "DD/MM/YYYY", "YYYY-MM-DD"]),
   notifications: notificationPreferences,
   featureFlags: z.record(z.string(), z.boolean()),

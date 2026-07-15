@@ -1,7 +1,6 @@
 import type { FormDescriptor } from "../introspection/types";
 
-/** Base options that all targets accept. Extend for target-specific options. */
-// biome-ignore lint/suspicious/noEmptyInterface: intentionally empty base for target option subtypes
+/** Base options that all targets accept. Intentionally empty: extend for target-specific options. */
 export interface TargetOptions {}
 
 /** A single file produced by a target */

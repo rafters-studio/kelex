@@ -1,10 +1,6 @@
 import type { FieldDescriptor, FormDescriptor } from "../introspection";
 import { emitField } from "./field-emitter";
-import type {
-  EmbeddedSchema,
-  SchemaWriterOptions,
-  SchemaWriterResult,
-} from "./types";
+import type { EmbeddedSchema, SchemaWriterOptions, SchemaWriterResult } from "./types";
 
 /**
  * Generates Zod v4 source code from a FormDescriptor.
@@ -52,9 +48,7 @@ function inferTypeName(schemaExportName: string): string {
  *   export type Foo = z.infer<typeof fooSchema>;
  */
 function emitSchemaDeclaration(form: FormDescriptor): string[] {
-  const fieldEntries = form.fields.map(
-    (field) => `  ${field.name}: ${emitField(field)},`,
-  );
+  const fieldEntries = form.fields.map((field) => `  ${field.name}: ${emitField(field)},`);
 
   const typeName = inferTypeName(form.schemaExportName);
 

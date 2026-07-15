@@ -16,23 +16,14 @@ interface ZodCheck {
   isInt?: boolean;
 }
 
-const KNOWN_FORMATS = new Set([
-  "email",
-  "url",
-  "uuid",
-  "cuid",
-  "datetime",
-] as const);
+const KNOWN_FORMATS = new Set(["email", "url", "uuid", "cuid", "datetime"] as const);
 
 /**
  * Extracts validation constraints from a Zod schema's checks array
  * and top-level def properties (format for z.email()/z.url()/z.uuid()).
  * Must be called on unwrapped schema (not optional/nullable wrapper).
  */
-export function extractConstraints(
-  schema: $ZodType,
-  unknownChecks?: string[],
-): FieldConstraints {
+export function extractConstraints(schema: $ZodType, unknownChecks?: string[]): FieldConstraints {
   const def = schema._zod.def as {
     type: string;
     format?: string;
@@ -91,9 +82,7 @@ export function extractConstraints(
           constraints.pattern = checkDef.pattern.source;
         } else if (
           checkDef.format &&
-          KNOWN_FORMATS.has(
-            checkDef.format as FieldConstraints["format"] & string,
-          )
+          KNOWN_FORMATS.has(checkDef.format as FieldConstraints["format"] & string)
         ) {
           constraints.format = checkDef.format as FieldConstraints["format"];
         }

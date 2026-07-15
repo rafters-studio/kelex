@@ -76,16 +76,8 @@ export const claimsSubmissionSchema = z.object({
     .min(20)
     .max(5000)
     .meta({ title: "Detailed description of the incident" }),
-  estimatedLoss: z
-    .number()
-    .min(0)
-    .multipleOf(0.01)
-    .meta({ title: "Estimated loss amount in USD" }),
-  claimDetails: z.discriminatedUnion("claimType", [
-    autoClaim,
-    homeClaim,
-    healthClaim,
-  ]),
+  estimatedLoss: z.number().min(0).multipleOf(0.01).meta({ title: "Estimated loss amount in USD" }),
+  claimDetails: z.discriminatedUnion("claimType", [autoClaim, homeClaim, healthClaim]),
   documents: z.array(supportingDocument).min(1),
   hasWitnesses: z.boolean(),
   witnessInfo: z.string().max(2000).optional(),

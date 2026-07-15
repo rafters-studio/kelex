@@ -16,9 +16,7 @@ export function resolveField(
   const matchedRule = findMatchingRule(field, rules);
 
   if (!matchedRule) {
-    throw new Error(
-      `No mapping rule matched field "${field.name}" of type "${field.type}"`,
-    );
+    throw new Error(`No mapping rule matched field "${field.name}" of type "${field.type}"`);
   }
 
   const props = matchedRule.getProps(field);

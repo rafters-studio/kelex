@@ -20,10 +20,7 @@ const { version } = require("../package.json") as { version: string };
 
 const program = new Command();
 
-program
-  .name("kelex")
-  .description("Generate forms from Zod schemas")
-  .version(version);
+program.name("kelex").description("Generate forms from Zod schemas").version(version);
 
 program
   .command("generate <schema-path>")
@@ -58,10 +55,7 @@ program
 
 program.parse();
 
-async function runGenerate(
-  schemaPath: string,
-  options: GenerateCommandOptions,
-): Promise<void> {
+async function runGenerate(schemaPath: string, options: GenerateCommandOptions): Promise<void> {
   const absoluteSchemaPath = path.resolve(schemaPath);
 
   if (!fs.existsSync(absoluteSchemaPath)) {
@@ -77,9 +71,7 @@ async function runGenerate(
   const schema = schemaModule[schemaExportName] ?? schemaModule.default;
 
   if (!schema) {
-    throw new Error(
-      `Schema "${schemaExportName}" not exported from ${schemaPath}`,
-    );
+    throw new Error(`Schema "${schemaExportName}" not exported from ${schemaPath}`);
   }
 
   if (!schema._zod) {
@@ -88,14 +80,10 @@ async function runGenerate(
     );
   }
 
-  const outputPath =
-    options.output ?? deriveOutputPath(schemaPath, target.defaultExtension);
+  const outputPath = options.output ?? deriveOutputPath(schemaPath, target.defaultExtension);
   const absoluteOutputPath = path.resolve(outputPath);
   const formName = options.name ?? deriveFormName(schemaExportName);
-  const schemaImportPath = calculateImportPath(
-    absoluteOutputPath,
-    absoluteSchemaPath,
-  );
+  const schemaImportPath = calculateImportPath(absoluteOutputPath, absoluteSchemaPath);
 
   const result = generate({
     schema,
@@ -113,12 +101,8 @@ async function runGenerate(
   const resolvedOutputDir = path.resolve(outputDir);
   for (let i = 0; i < result.files.length; i++) {
     const file = result.files[i];
-    const filePath =
-      i === 0 ? absoluteOutputPath : path.resolve(outputDir, file.filename);
-    if (
-      !filePath.startsWith(`${resolvedOutputDir}${path.sep}`) &&
-      filePath !== resolvedOutputDir
-    ) {
+    const filePath = i === 0 ? absoluteOutputPath : path.resolve(outputDir, file.filename);
+    if (!filePath.startsWith(`${resolvedOutputDir}${path.sep}`) && filePath !== resolvedOutputDir) {
       throw new Error(
         `Target produced a filename that escapes the output directory: ${file.filename}`,
       );
@@ -146,10 +130,7 @@ async function runGenerate(
  * Derives output path from schema path.
  * e.g. ./user-schema.ts -> ./user-form{defaultExtension}
  */
-function deriveOutputPath(
-  schemaPath: string,
-  defaultExtension: string,
-): string {
+function deriveOutputPath(schemaPath: string, defaultExtension: string): string {
   const dir = path.dirname(schemaPath);
   const base = path.basename(schemaPath, path.extname(schemaPath));
   const formBase = base.replace(/-schema$/i, "").replace(/schema$/i, "");
@@ -162,9 +143,7 @@ function deriveOutputPath(
  * userSchema -> UserForm
  */
 function deriveFormName(schemaExportName: string): string {
-  const base = schemaExportName
-    .replace(/Schema$/i, "")
-    .replace(/^./, (s) => s.toUpperCase());
+  const base = schemaExportName.replace(/Schema$/i, "").replace(/^./, (s) => s.toUpperCase());
 
   const finalBase = base || "Generated";
   return `${finalBase}Form`;

@@ -1,9 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { FieldDescriptor } from "../../src/introspection";
-import {
-  defaultMappingRules,
-  findMatchingRule,
-} from "../../src/mapping/default-map";
+import { defaultMappingRules, findMatchingRule } from "../../src/mapping/default-map";
 
 // Helper to create test fields
 function createField(
@@ -436,7 +433,7 @@ describe("findMatchingRule", () => {
 
   it("returns undefined for unsupported field", () => {
     // Create a field with an unsupported type (cast to bypass type checking)
-    const field = createField({ type: "string" as "string" });
+    const field = createField({ type: "string" as const });
     (field as { type: string }).type = "unsupported";
     const rule = findMatchingRule(field);
     expect(rule).toBeUndefined();

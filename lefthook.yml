@@ -2,8 +2,8 @@ pre-commit:
   parallel: true
   commands:
     lint:
-      glob: "*.{ts,tsx,js,jsx,json}"
-      run: pnpm biome check --staged --no-errors-on-unmatched {staged_files}
+      glob: "*.{ts,tsx,js,jsx}"
+      run: pnpm oxlint {staged_files}
     typecheck:
       run: pnpm typecheck
 

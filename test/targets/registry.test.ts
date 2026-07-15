@@ -93,8 +93,6 @@ describe("unregisterTarget", () => {
   });
 
   it("throws when removing a built-in target", () => {
-    expect(() => unregisterTarget("composite")).toThrow(
-      "Cannot unregister built-in",
-    );
+    expect(() => unregisterTarget("composite")).toThrow("Cannot unregister built-in");
   });
 });
