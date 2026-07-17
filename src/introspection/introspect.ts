@@ -82,6 +82,40 @@ function nameToLabel(name: string): string {
 }
 
 /**
+ * Formats a warning for a check the descriptor cannot carry. Refinements
+ * (`.refine()`/`.superRefine()`) surface as Zod "custom" checks; every other
+ * unrecognized check kind is named verbatim so nothing drops silently.
+ */
+function formatDroppedCheck(fieldName: string, check: string): string {
+  if (check === "custom") {
+    return `Field "${fieldName}": a .refine()/.superRefine() constraint is not represented in the descriptor and must be re-applied downstream.`;
+  }
+  return `Field "${fieldName}": dropped unrecognized check "${check}".`;
+}
+
+/**
+ * Surfaces object-level checks (cross-field `.refine()` on the schema itself) as
+ * warnings. Names the field from the refinement's `path` when present, since a
+ * top-level refine is never introspected as one of the object's fields.
+ */
+function warnObjectRefinements(schema: $ZodType, warnings: string[]): void {
+  const def = schema._zod.def as {
+    checks?: { _zod?: { def?: { check?: string; path?: (string | number)[] } } }[];
+  };
+  if (!Array.isArray(def.checks)) {
+    return;
+  }
+  for (const check of def.checks) {
+    const checkDef = check._zod?.def;
+    if (!checkDef?.check) {
+      continue;
+    }
+    const field = checkDef.path && checkDef.path.length > 0 ? String(checkDef.path[0]) : "(form)";
+    warnings.push(formatDroppedCheck(field, checkDef.check));
+  }
+}
+
+/**
  * Resolves a schema to its root, unwrapping intersections into a merged
  * object shape. Returns the resolved schema and any warnings.
  */
@@ -92,11 +126,12 @@ function resolveRootSchema(schema: $ZodType): {
   const def = schema._zod.def as { type: string };
 
   if (def.type === "intersection") {
-    const shape = flattenIntersection(schema);
+    const warnings: string[] = [];
+    const shape = flattenIntersection(schema, warnings);
     // Build a synthetic object-like schema view
     return {
       resolved: buildSyntheticObjectSchema(shape),
-      warnings: [],
+      warnings,
     };
   }
 
@@ -104,15 +139,23 @@ function resolveRootSchema(schema: $ZodType): {
 }
 
 /**
- * Recursively flattens an intersection into a single merged shape.
+ * Recursively flattens an intersection into a single merged shape. Overlapping
+ * keys warn: the right-hand member wins and declaration order is not preserved.
  */
-function flattenIntersection(schema: $ZodType): Record<string, $ZodType> {
+function flattenIntersection(schema: $ZodType, warnings: string[]): Record<string, $ZodType> {
   const def = schema._zod.def as { type: string };
 
   if (def.type === "intersection") {
     const intDef = def as unknown as ZodIntersectionDef;
-    const leftShape = flattenIntersection(intDef.left);
-    const rightShape = flattenIntersection(intDef.right);
+    const leftShape = flattenIntersection(intDef.left, warnings);
+    const rightShape = flattenIntersection(intDef.right, warnings);
+    for (const key of Object.keys(rightShape)) {
+      if (key in leftShape) {
+        warnings.push(
+          `Intersection field "${key}" is declared in both members; the right-hand definition wins and original field order may not be preserved.`,
+        );
+      }
+    }
     return { ...leftShape, ...rightShape };
   }
 
@@ -176,8 +219,27 @@ function buildMetadata(inner: $ZodType, warnings: string[]): FieldMetadata {
 
   if (type === "record") {
     const recDef = def as unknown as ZodRecordDef;
+    const keyDef = recDef.keyType._zod.def as {
+      type: string;
+      format?: string;
+      checks?: unknown[];
+    };
+    const keyIsPlainString =
+      keyDef.type === "string" &&
+      !keyDef.format &&
+      (!Array.isArray(keyDef.checks) || keyDef.checks.length === 0);
+    if (!keyIsPlainString) {
+      warnings.push(
+        `Record key schema (type "${keyDef.type}") is not represented in the descriptor; only the value schema is carried.`,
+      );
+    }
     const valueDescriptor = introspectField("value", recDef.valueType, warnings);
     return { kind: "record", valueDescriptor };
+  }
+
+  if (type === "literal") {
+    const litDef = def as unknown as ZodLiteralDef;
+    return { kind: "literal", value: litDef.values[0] };
   }
 
   return { kind: type as "string" | "number" | "boolean" | "date" };
@@ -243,9 +305,22 @@ function introspectShape(shape: Record<string, $ZodType>, warnings: string[]): F
 }
 
 /**
- * Resolves the effective type string from an unwrapped schema def.
+ * Peels pipe/transform wrappers to the input schema so that the field's
+ * constraints, metadata, and resolved type are all derived from ONE consistent
+ * inner schema. Without this, a pre-pipe schema (e.g. z.string().min(3).transform)
+ * has its constraints read from the pipe wrapper (which carries none) and lost.
+ */
+function peelPipe(schema: $ZodType): $ZodType {
+  let current = schema;
+  while ((current._zod.def as { type: string }).type === "pipe") {
+    current = (current._zod.def as unknown as { in: $ZodType }).in;
+  }
+  return current;
+}
+
+/**
+ * Resolves the effective type string from an unwrapped, pipe-peeled schema def.
  * Handles Zod v4 top-level format shortcuts (z.email() -> string with format).
- * Also handles pipe/transform by extracting the input type.
  */
 function resolveType(inner: $ZodType): string {
   const def = inner._zod.def as { type: string; format?: string };
@@ -255,12 +330,6 @@ function resolveType(inner: $ZodType): string {
   // Their def.type is already "string", so they pass through naturally.
 
   // z.int() is a number with def.format "safeint" -- type is already "number"
-
-  // pipe/transform: use the input type
-  if (type === "pipe") {
-    const pipeDef = def as unknown as { type: string; in: $ZodType };
-    return resolveType(pipeDef.in);
-  }
 
   // literal: map to the JS type of the literal value for scalar representation
   if (type === "literal") {
@@ -281,13 +350,15 @@ function resolveType(inner: $ZodType): string {
  * Introspects a single field schema into a FieldDescriptor.
  */
 function introspectField(name: string, fieldSchema: $ZodType, warnings: string[]): FieldDescriptor {
-  const { inner, isOptional, isNullable } = unwrapSchema(fieldSchema);
+  const { inner: unwrapped, isOptional, isNullable, defaultValue } = unwrapSchema(fieldSchema);
+  // Peel pipe/transform once so type, constraints, and metadata share one inner schema.
+  const inner = peelPipe(unwrapped);
   const type = resolveType(inner);
 
   // Check if it's a supported type
   if (!isScalarType(type) && !isCompositeType(type)) {
     warnings.push(`Field "${name}": unsupported type "${type}", treating as string`);
-    return {
+    const fallback: FieldDescriptor = {
       name,
       label: nameToLabel(name),
       type: "string",
@@ -296,10 +367,18 @@ function introspectField(name: string, fieldSchema: $ZodType, warnings: string[]
       constraints: {},
       metadata: { kind: "string" },
     };
+    if (defaultValue !== undefined) {
+      fallback.defaultValue = defaultValue;
+    }
+    return fallback;
   }
 
   const fieldType = type as FieldType;
-  const constraints = extractConstraints(inner);
+  const unknownChecks: string[] = [];
+  const constraints = extractConstraints(inner, unknownChecks);
+  for (const check of unknownChecks) {
+    warnings.push(formatDroppedCheck(name, check));
+  }
   const metadata = buildMetadata(inner, warnings);
   const description = (inner as { description?: string }).description;
 
@@ -315,6 +394,10 @@ function introspectField(name: string, fieldSchema: $ZodType, warnings: string[]
 
   if (description) {
     field.description = description;
+  }
+
+  if (defaultValue !== undefined) {
+    field.defaultValue = defaultValue;
   }
 
   return field;
@@ -336,6 +419,9 @@ export function introspect(schema: $ZodType, options: IntrospectOptions): FormDe
   if (def.type !== "object") {
     throw new Error(`kelex only supports z.object() schemas at the top level, got "${def.type}"`);
   }
+
+  // Surface cross-field refinements on the top-level object (dropped otherwise).
+  warnObjectRefinements(resolved, warnings);
 
   const fields = introspectShape(def.shape, warnings);
 

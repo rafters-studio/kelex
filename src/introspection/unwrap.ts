@@ -7,6 +7,8 @@ export interface UnwrapResult {
   isOptional: boolean;
   /** Whether z.nullable() was present */
   isNullable: boolean;
+  /** Default value from z.default(), captured before the wrapper is peeled */
+  defaultValue?: unknown;
 }
 
 /** Type guard to check if schema has unwrap method */
@@ -51,6 +53,7 @@ export function unwrapSchema(schema: $ZodType): UnwrapResult {
   let current = schema;
   let isOptional = false;
   let isNullable = false;
+  let defaultValue: unknown;
 
   // Unwrap nested optional/nullable/default wrappers
   while (
@@ -62,8 +65,10 @@ export function unwrapSchema(schema: $ZodType): UnwrapResult {
       isOptional = true;
     } else if (current._zod.def.type === "nullable") {
       isNullable = true;
+    } else {
+      // default: capture the value before peeling the wrapper to reach the inner type
+      defaultValue = (current._zod.def as { defaultValue?: unknown }).defaultValue;
     }
-    // default: no flag, just peel the wrapper to get at the inner type
 
     if (!hasUnwrap(current)) {
       throw new Error(`${current._zod.def.type} schema missing unwrap method`);
@@ -75,5 +80,6 @@ export function unwrapSchema(schema: $ZodType): UnwrapResult {
     inner: current,
     isOptional,
     isNullable,
+    defaultValue,
   };
 }
