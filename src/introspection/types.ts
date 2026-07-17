@@ -16,12 +16,22 @@ export interface FieldConstraints {
   // String constraints
   minLength?: number;
   maxLength?: number;
+  /** Exact length from z.string().length(n) */
+  length?: number;
   pattern?: string;
+  /** Literal prefix from z.string().startsWith(p) */
+  startsWith?: string;
+  /** Literal suffix from z.string().endsWith(s) */
+  endsWith?: string;
   format?: "email" | "url" | "uuid" | "cuid" | "datetime";
 
   // Number constraints
   min?: number;
   max?: number;
+  /** True when `min` is exclusive (z.number().positive() / .gt()) rather than inclusive (.gte()/.min()) */
+  minExclusive?: boolean;
+  /** True when `max` is exclusive (z.number().lt()) rather than inclusive (.lte()/.max()) */
+  maxExclusive?: boolean;
   step?: number;
   isInt?: boolean;
 
@@ -45,7 +55,8 @@ export type FieldMetadata =
       variants: { value: string; fields: FieldDescriptor[] }[];
     }
   | { kind: "tuple"; elements: FieldDescriptor[] }
-  | { kind: "record"; valueDescriptor: FieldDescriptor };
+  | { kind: "record"; valueDescriptor: FieldDescriptor }
+  | { kind: "literal"; value: unknown };
 
 /** Single field descriptor */
 export interface FieldDescriptor {
@@ -72,6 +83,12 @@ export interface FieldDescriptor {
 
   /** Type-specific metadata (e.g., enum values) */
   metadata: FieldMetadata;
+
+  /**
+   * Default value from z.default(). Captured before the default wrapper is
+   * peeled during unwrapping. `undefined` when the field has no default.
+   */
+  defaultValue?: unknown;
 
   /**
    * Reference to a named schema export. When set, the schema-writer emits the

@@ -6,8 +6,16 @@ interface ZodCheckDef {
   minimum?: number;
   maximum?: number;
   value?: number;
+  /** Present on greater_than/less_than: whether the bound is inclusive (.gte/.lte/.min/.max) or exclusive (.gt/.lt/.positive) */
+  inclusive?: boolean;
+  /** Exact length from length_equals (z.string().length(n)) */
+  length?: number;
   format?: string;
   pattern?: RegExp;
+  /** Literal prefix on string_format with format "starts_with" */
+  prefix?: string;
+  /** Literal suffix on string_format with format "ends_with" */
+  suffix?: string;
 }
 
 interface ZodCheck {
@@ -77,26 +85,47 @@ export function extractConstraints(schema: $ZodType, unknownChecks?: string[]): 
         }
         break;
 
+      case "length_equals":
+        if (checkDef.length !== undefined) {
+          constraints.length = checkDef.length;
+        }
+        break;
+
       case "string_format":
         if (checkDef.format === "regex" && checkDef.pattern) {
           constraints.pattern = checkDef.pattern.source;
+        } else if (checkDef.format === "starts_with" && checkDef.prefix !== undefined) {
+          constraints.startsWith = checkDef.prefix;
+        } else if (checkDef.format === "ends_with" && checkDef.suffix !== undefined) {
+          constraints.endsWith = checkDef.suffix;
         } else if (
           checkDef.format &&
           KNOWN_FORMATS.has(checkDef.format as FieldConstraints["format"] & string)
         ) {
           constraints.format = checkDef.format as FieldConstraints["format"];
+        } else {
+          unknownChecks?.push(
+            checkDef.format ? `string_format:${checkDef.format}` : "string_format",
+          );
         }
         break;
 
       case "greater_than":
         if (checkDef.value !== undefined) {
           constraints.min = checkDef.value;
+          // .positive()/.gt() are exclusive; .nonnegative()/.gte()/.min() are inclusive
+          if (checkDef.inclusive === false) {
+            constraints.minExclusive = true;
+          }
         }
         break;
 
       case "less_than":
         if (checkDef.value !== undefined) {
           constraints.max = checkDef.value;
+          if (checkDef.inclusive === false) {
+            constraints.maxExclusive = true;
+          }
         }
         break;
 
