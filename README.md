@@ -1,168 +1,82 @@
 # kelex
 
-Generate type-safe React form components from Zod schemas. Built for [TanStack Form](https://tanstack.com/form) and [Rafters](https://rafters.studio)/[shadcn/ui](https://ui.shadcn.com) components.
+Generate form artifacts from Zod schemas. A schema goes in; a structured description of its form comes out, ready for a code-generation target to turn into a component.
 
-## Quick Start
+> **Status: pre-release, mid-rebuild.** The `composite` target — the form as a JSON `FormDescriptor` — is the only built-in output today. Framework code targets (Astro, Web Components) are in active development on a pluggable-transform architecture; the earlier React/TanStack target has been removed. Not yet published to npm; use it from a local build.
 
-```bash
-pnpx @rafters-studio/kelex@latest generate ./src/schemas/user.ts -s userSchema
+## What it does
+
+kelex is a small, stateless pipeline: it reads a Zod schema and exits with files.
+
+```
+introspect (Zod -> FormDescriptor) -> map (field -> component) -> generate (FormDescriptor -> target output)
 ```
 
-This reads your Zod schema and generates:
+- **introspect** walks a live Zod schema into a `FormDescriptor`: every field's type, constraints, nesting, and order.
+- **map** resolves each field to a component and props (the mapping layer a codegen target consumes).
+- **generate** hands the descriptor to a target. The built-in `composite` target serializes it to JSON — the contract other tools (renderers, editors, a Rust reader) read without re-implementing Zod introspection.
 
-- A complete React form component with full TypeScript types
-- A `primitives.tsx` file with built-in UI components (shadcn-compatible API)
-- TanStack Form for state management and validation
-- Client-side validation using your Zod schema
+## CLI
 
-The generated primitives are pure HTML/React components styled with Tailwind that match the shadcn component API. When you're ready to use your own components, pass `--ui` to swap the import path:
-
-```bash
-pnpx @rafters-studio/kelex@latest generate ./src/schemas/user.ts -s userSchema --ui @/components/ui
+```sh
+kelex generate <schema-path> -t composite -o form.json -s mySchema
+kelex targets
 ```
 
-## Requirements
+| Option                | Description            | Default                  |
+| --------------------- | ---------------------- | ------------------------ |
+| `-o, --output <path>` | Output file path       | Derived from schema path |
+| `-n, --name <name>`   | Form name              | Derived from schema name |
+| `-s, --schema <name>` | Exported schema name   | `schema`                 |
+| `-t, --target <name>` | Code-generation target | `composite`              |
 
-- **Zod 4** - Schema definitions (`zod@^4.0.0`)
-- **TanStack Form** - Form state management
-- **Tailwind CSS** - Styling (used by generated primitives and form layout)
-
-## Usage
-
-```bash
-pnpx @rafters-studio/kelex@latest generate <schema-path> [options]
-```
-
-### Options
-
-| Option                | Description              | Default                       |
-| --------------------- | ------------------------ | ----------------------------- |
-| `-o, --output <path>` | Output file path         | Derived from schema path      |
-| `-n, --name <name>`   | Form component name      | Derived from schema name      |
-| `-s, --schema <name>` | Exported schema name     | `schema`                      |
-| `--ui <path>`         | UI component import path | Generates built-in primitives |
-
-### Examples
-
-```bash
-# Basic - generates user-form.tsx + primitives.tsx
-pnpx @rafters-studio/kelex@latest generate ./src/schemas/user-schema.ts -s userSchema
-
-# Custom output path and component name
-pnpx @rafters-studio/kelex@latest generate ./src/schemas/user.ts \
-  -o ./src/components/forms/profile-form.tsx \
-  -n ProfileForm \
-  -s userProfileSchema
-
-# Use your own shadcn components (no primitives generated)
-pnpx @rafters-studio/kelex@latest generate ./src/schemas/user.ts \
-  -s userSchema \
-  --ui @/components/ui
-```
-
-## Supported Types
-
-### Scalar Types
-
-| Zod Type                   | Component  | Notes                     |
-| -------------------------- | ---------- | ------------------------- |
-| `z.string()`               | Input      | `type="text"`             |
-| `z.string().email()`       | Input      | `type="email"`            |
-| `z.string().url()`         | Input      | `type="url"`              |
-| `z.string().max(n)`        | Textarea   | When `n > 100`            |
-| `z.number()`               | Input      | `type="number"`           |
-| `z.number().min(a).max(b)` | Slider     | When range `b - a <= 100` |
-| `z.boolean()`              | Checkbox   |                           |
-| `z.enum([...])`            | RadioGroup | When `<= 4` options       |
-| `z.enum([...])`            | Select     | When `> 4` options        |
-| `z.date()`                 | DatePicker |                           |
-
-### Composite Types
-
-| Zod Type                          | Rendering                                 | Notes            |
-| --------------------------------- | ----------------------------------------- | ---------------- |
-| `z.object({...})`                 | Card with nested fields                   | Recursive        |
-| `z.array(z.string())`             | Dynamic list with add/remove              | Simple arrays    |
-| `z.array(z.object({...}))`        | Card per item with nested fields          | Array of objects |
-| `z.discriminatedUnion(...)`       | Select discriminator + conditional fields |                  |
-| `z.tuple([...])`                  | Card with indexed fields                  |                  |
-| `z.record(z.string(), ...)`       | Key-value pair list                       |                  |
-| `z.intersection(a, b)` / `.and()` | Merged into single object                 | Top-level only   |
-
-### Modifiers
-
-| Modifier                      | Effect                                 |
-| ----------------------------- | -------------------------------------- |
-| `z.optional(...)`             | Marks field as not required            |
-| `z.nullable(...)`             | Sets `isNullable` on field descriptor  |
-| `z.nullish(...)`              | Optional + nullable                    |
-| `.brand(...)`                 | Transparent (no effect on form)        |
-| `.check()` / `.superRefine()` | Validation preserved, no layout effect |
-| `z.pipe()` / `.transform()`   | Uses input type for form field         |
-
-## Example
-
-**Input schema:**
-
-```typescript
-import { z } from "zod/v4";
-
-export const userSchema = z.object({
-  name: z.string().min(1),
-  email: z.string().email(),
-  age: z.number().min(0).max(150).optional(),
-  role: z.enum(["admin", "user", "guest"]),
-  newsletter: z.boolean(),
-  address: z.object({
-    street: z.string(),
-    city: z.string(),
-    zip: z.string(),
-  }),
-  tags: z.array(z.string()),
-});
-```
-
-**Generated output:** `user-form.tsx` + `primitives.tsx`
-
-The form handles nested objects (Card-based grouping), arrays (dynamic add/remove), and all scalar types out of the box.
+The schema module is imported and evaluated at generate time (kelex reads the live Zod graph, not source text), so point it only at a schema path you trust.
 
 ## Programmatic API
 
 ```typescript
-import { generate } from "@rafters-studio/kelex";
-import { userSchema } from "./schema";
+import { z } from "zod/v4";
+import { generate, introspect, compositeTarget } from "@rafters/kelex";
+
+export const userSchema = z.object({
+  name: z.string().min(1),
+  email: z.string().email(),
+  role: z.enum(["admin", "user", "guest"]),
+  address: z.object({ street: z.string(), city: z.string() }),
+  tags: z.array(z.string()),
+});
 
 const result = generate({
   schema: userSchema,
   formName: "UserForm",
   schemaImportPath: "./schema",
   schemaExportName: "userSchema",
-  // omit uiImportPath to get built-in primitives
+  target: compositeTarget,
 });
 
-result.code; // Generated form component TSX
-result.primitives; // Built-in UI components TSX (undefined when uiImportPath is set)
-result.fields; // ["name", "email", "age", ...]
-result.warnings; // Any issues encountered
+result.files; // [{ filename, content }, ...]
+result.fields; // ["name", "email", "role", ...]
+result.warnings; // constructs the reader could not represent
 ```
 
-Pass `uiImportPath` to use your own components and skip primitives generation:
+`introspect`, `resolveField`, and `writeSchema` (FormDescriptor -> Zod source) are also exported. Register your own target with `registerTarget(target)` — a `CodegenTarget` takes the descriptor and returns output files, so a target can emit any format.
 
-```typescript
-const result = generate({
-  schema: userSchema,
-  formName: "UserForm",
-  schemaImportPath: "./schema",
-  schemaExportName: "userSchema",
-  uiImportPath: "@/components/ui",
-});
+## Supported Zod constructs
 
-result.primitives; // undefined
-```
+Introspection handles: `string`, `number`, `boolean`, `date`, `enum`, `object` (nested), `array`, `tuple`, `record`, `union`, `discriminatedUnion`, plus `optional`, `nullable`, and `describe`. Constraints such as `min`/`max`, `minLength`/`maxLength`, `regex`, and string formats (`email`, `url`, `uuid`, ...) are carried onto the descriptor. Field order is preserved.
 
-## Documentation
+Full constraint fidelity is being hardened: some constructs (defaults, exact `.length()`, gt-vs-gte inclusivity, refinements) are not yet fully carried and are being fixed under the lossless-reader work. Anything the reader cannot represent is reported in `result.warnings` rather than dropped silently.
 
-Full documentation at [rafters.studio/tools/kelex](https://rafters.studio/tools/kelex)
+## Requirements
+
+- **Zod 4** (`zod@^4.0.0`) — peer dependency; schemas are read from the live graph.
+- **Node 24**.
+
+## Development
+
+- `pnpm` only. `pnpm build` (tsdown), `pnpm test` (vitest), `pnpm flightcheck` (lint + format + typecheck + all tests) before a PR.
+- Lint/format: oxlint + oxfmt. TypeScript 7.
+- Tests live in `test/` mirroring `src/`; `*.test.ts` unit, `*.spec.ts` integration.
 
 ## License
 
