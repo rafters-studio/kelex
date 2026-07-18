@@ -8,8 +8,11 @@ Generate form artifacts from Zod schemas. A schema goes in; a structured descrip
 
 kelex is a small, stateless pipeline: it reads a Zod schema and exits with files.
 
-```
-introspect (Zod -> FormDescriptor) -> map (field -> component) -> generate (FormDescriptor -> target output)
+```mermaid
+flowchart LR
+  A["Zod schema"] -- introspect --> B["FormDescriptor"]
+  B -- map --> C["field &rarr; component"]
+  C -- generate --> D["target output"]
 ```
 
 - **introspect** walks a live Zod schema into a `FormDescriptor`: every field's type, constraints, nesting, and order.
@@ -63,9 +66,9 @@ result.warnings; // constructs the reader could not represent
 
 ## Supported Zod constructs
 
-Introspection handles: `string`, `number`, `boolean`, `date`, `enum`, `object` (nested), `array`, `tuple`, `record`, `union`, `discriminatedUnion`, plus `optional`, `nullable`, and `describe`. Constraints such as `min`/`max`, `minLength`/`maxLength`, `regex`, and string formats (`email`, `url`, `uuid`, ...) are carried onto the descriptor. Field order is preserved.
+Introspection handles: `string`, `number`, `boolean`, `date`, `enum`, `object` (nested), `array`, `tuple`, `record`, `union`, `discriminatedUnion`, plus `optional`, `nullable`, and `describe`. Constraints are carried onto the descriptor: `min`/`max` with gt-vs-gte inclusivity, `minLength`/`maxLength`, exact `.length()`, `regex`, string formats (`email`, `url`, `uuid`, ...), `startsWith`/`endsWith`, and default values. Field order is preserved.
 
-Full constraint fidelity is being hardened: some constructs (defaults, exact `.length()`, gt-vs-gte inclusivity, refinements) are not yet fully carried and are being fixed under the lossless-reader work. Anything the reader cannot represent is reported in `result.warnings` rather than dropped silently.
+Constructs the reader cannot represent — arbitrary refinements, and a few edge cases still being closed — are reported in `result.warnings` rather than dropped silently, so a consumer always knows what did not survive.
 
 ## Requirements
 
