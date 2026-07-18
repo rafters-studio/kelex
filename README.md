@@ -8,8 +8,11 @@ Generate form artifacts from Zod schemas. A schema goes in; a structured descrip
 
 kelex is a small, stateless pipeline: it reads a Zod schema and exits with files.
 
-```
-introspect (Zod -> FormDescriptor) -> map (field -> component) -> generate (FormDescriptor -> target output)
+```mermaid
+flowchart LR
+  A["Zod schema"] -- introspect --> B["FormDescriptor"]
+  B -- map --> C["field &rarr; component"]
+  C -- generate --> D["target output"]
 ```
 
 - **introspect** walks a live Zod schema into a `FormDescriptor`: every field's type, constraints, nesting, and order.
