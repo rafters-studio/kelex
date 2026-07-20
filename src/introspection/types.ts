@@ -127,6 +127,15 @@ export interface FormStep {
 
 /** Complete form descriptor */
 export interface FormDescriptor {
+  /**
+   * Deterministic content hash of the fields -- the descriptor's data contract.
+   * Identical schemas hash identically and any contract change produces a new
+   * value with no human bump, so consumers can pin against it and detect
+   * schema evolution on their own. Presentation and cosmetic options are
+   * excluded; see `computeVersion`.
+   */
+  version: string;
+
   /** Form name for the generated component */
   name: string;
 

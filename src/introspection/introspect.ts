@@ -3,6 +3,7 @@ import { extractConstraints } from "./checks";
 import { collectMeta, metaString } from "./meta";
 import type { FieldDescriptor, FieldMetadata, FieldType, FormDescriptor } from "./types";
 import { type UnwrapResult, unwrapSchema } from "./unwrap";
+import { computeVersion } from "./version";
 
 export interface IntrospectOptions {
   /** Name for the generated form component */
@@ -480,6 +481,7 @@ export function introspect(schema: $ZodType, options: IntrospectOptions): FormDe
   const fields = introspectShape(def.shape, warnings);
 
   return {
+    version: computeVersion(fields),
     name: options.formName,
     fields,
     schemaImportPath: options.schemaImportPath,
