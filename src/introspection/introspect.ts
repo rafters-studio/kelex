@@ -84,15 +84,45 @@ function nameToLabel(name: string): string {
 }
 
 /**
+ * A location within the schema, following Standard Schema's `PathSegment[]`
+ * convention: string segments are object keys, numbers are array or tuple
+ * indices. A consumer can match a warning against a `~standard` issue path.
+ *
+ * The one position with no runtime equivalent is a record's value schema, whose
+ * real key is not known until validation. It uses the `RECORD_VALUE` segment.
+ */
+type PathSegment = string | number;
+
+/** Stands in for "any key" at a record's value position. */
+const RECORD_VALUE = "*";
+
+/**
+ * Renders a path for humans: `bag[0].quality`, `coords[0]`, `stats.*`.
+ * A top-level field renders as its bare name, so the common case reads the
+ * same as it did before paths existed.
+ */
+function formatPath(path: PathSegment[]): string {
+  if (path.length === 0) {
+    return "(form)";
+  }
+  return path.reduce<string>((acc, segment, index) => {
+    if (typeof segment === "number") {
+      return `${acc}[${segment}]`;
+    }
+    return index === 0 ? String(segment) : `${acc}.${segment}`;
+  }, "");
+}
+
+/**
  * Formats a warning for a check the descriptor cannot carry. Refinements
  * (`.refine()`/`.superRefine()`) surface as Zod "custom" checks; every other
  * unrecognized check kind is named verbatim so nothing drops silently.
  */
-function formatDroppedCheck(fieldName: string, check: string): string {
+function formatDroppedCheck(location: string, check: string): string {
   if (check === "custom") {
-    return `Field "${fieldName}": a .refine()/.superRefine() constraint is not represented in the descriptor and must be re-applied downstream.`;
+    return `Field "${location}": a .refine()/.superRefine() constraint is not represented in the descriptor and must be re-applied downstream.`;
   }
-  return `Field "${fieldName}": dropped unrecognized check "${check}".`;
+  return `Field "${location}": dropped unrecognized check "${check}".`;
 }
 
 /**
@@ -200,7 +230,7 @@ function buildSyntheticObjectSchema(shape: Record<string, $ZodType>): $ZodType {
 /**
  * Builds FieldMetadata based on the field type.
  */
-function buildMetadata(inner: $ZodType, warnings: string[]): FieldMetadata {
+function buildMetadata(inner: $ZodType, warnings: string[], path: PathSegment[]): FieldMetadata {
   const def = inner._zod.def as { type: string };
   const type = def.type;
 
@@ -212,23 +242,27 @@ function buildMetadata(inner: $ZodType, warnings: string[]): FieldMetadata {
 
   if (type === "object") {
     const objDef = def as unknown as ZodObjectDef;
-    const fields = introspectShape(objDef.shape, warnings);
+    const fields = introspectShape(objDef.shape, warnings, path);
     return { kind: "object", fields };
   }
 
   if (type === "array") {
     const arrDef = def as unknown as ZodArrayDef;
-    const element = introspectField("item", arrDef.element, warnings);
+    // Index 0 stands for every element -- the descriptor describes one shape,
+    // not one occurrence.
+    const element = introspectField("item", arrDef.element, warnings, [...path, 0]);
     return { kind: "array", element };
   }
 
   if (type === "union") {
-    return buildUnionMetadata(def as unknown as ZodUnionDef, warnings);
+    return buildUnionMetadata(def as unknown as ZodUnionDef, warnings, path);
   }
 
   if (type === "tuple") {
     const tupDef = def as unknown as ZodTupleDef;
-    const elements = tupDef.items.map((item, i) => introspectField(String(i), item, warnings));
+    const elements = tupDef.items.map((item, i) =>
+      introspectField(String(i), item, warnings, [...path, i]),
+    );
     return { kind: "tuple", elements };
   }
 
@@ -245,10 +279,13 @@ function buildMetadata(inner: $ZodType, warnings: string[]): FieldMetadata {
       (!Array.isArray(keyDef.checks) || keyDef.checks.length === 0);
     if (!keyIsPlainString) {
       warnings.push(
-        `Record key schema (type "${keyDef.type}") is not represented in the descriptor; only the value schema is carried.`,
+        `Field "${formatPath(path)}": record key schema (type "${keyDef.type}") is not represented in the descriptor; only the value schema is carried.`,
       );
     }
-    const valueDescriptor = introspectField("value", recDef.valueType, warnings);
+    const valueDescriptor = introspectField("value", recDef.valueType, warnings, [
+      ...path,
+      RECORD_VALUE,
+    ]);
     return { kind: "record", valueDescriptor };
   }
 
@@ -263,10 +300,17 @@ function buildMetadata(inner: $ZodType, warnings: string[]): FieldMetadata {
 /**
  * Builds union metadata, detecting discriminated unions.
  */
-function buildUnionMetadata(def: ZodUnionDef, warnings: string[]): FieldMetadata {
+function buildUnionMetadata(
+  def: ZodUnionDef,
+  warnings: string[],
+  path: PathSegment[],
+): FieldMetadata {
   const discriminator = def.discriminator;
   const variants: { value: string; fields: FieldDescriptor[] }[] = [];
 
+  // Variants are alternatives at the SAME position, not children of it, so a
+  // variant's fields sit directly under the union's own path -- which is also
+  // where a `~standard` issue for them would report.
   for (const option of def.options) {
     const optDef = option._zod.def as { type: string };
 
@@ -283,15 +327,15 @@ function buildUnionMetadata(def: ZodUnionDef, warnings: string[]): FieldMetadata
         }
       }
 
-      const fields = introspectShape(objDef.shape, warnings);
+      const fields = introspectShape(objDef.shape, warnings, path);
       variants.push({ value, fields });
     } else if (optDef.type === "object") {
       const objDef = optDef as unknown as ZodObjectDef;
-      const fields = introspectShape(objDef.shape, warnings);
+      const fields = introspectShape(objDef.shape, warnings, path);
       variants.push({ value: `variant_${variants.length}`, fields });
     } else {
       // Non-object union option -- wrap as a single-field variant
-      const field = introspectField(`option_${variants.length}`, option, warnings);
+      const field = introspectField(`option_${variants.length}`, option, warnings, path);
       variants.push({
         value: `variant_${variants.length}`,
         fields: [field],
@@ -309,11 +353,15 @@ function buildUnionMetadata(def: ZodUnionDef, warnings: string[]): FieldMetadata
 /**
  * Introspects all fields in an object shape.
  */
-function introspectShape(shape: Record<string, $ZodType>, warnings: string[]): FieldDescriptor[] {
+function introspectShape(
+  shape: Record<string, $ZodType>,
+  warnings: string[],
+  parentPath: PathSegment[],
+): FieldDescriptor[] {
   const fields: FieldDescriptor[] = [];
 
   for (const [name, fieldSchema] of Object.entries(shape)) {
-    fields.push(introspectField(name, fieldSchema, warnings));
+    fields.push(introspectField(name, fieldSchema, warnings, [...parentPath, name]));
   }
 
   return fields;
@@ -399,15 +447,21 @@ function resolveType(inner: $ZodType): string {
 /**
  * Introspects a single field schema into a FieldDescriptor.
  */
-function introspectField(name: string, fieldSchema: $ZodType, warnings: string[]): FieldDescriptor {
+function introspectField(
+  name: string,
+  fieldSchema: $ZodType,
+  warnings: string[],
+  path: PathSegment[],
+): FieldDescriptor {
   // Resolve wrappers and pipes together so type, constraints, and metadata all
   // derive from one inner schema regardless of the order the author chained them.
   const { inner, isOptional, isNullable, defaultValue, hasCatch } = resolveInner(fieldSchema);
   const type = resolveType(inner);
+  const location = formatPath(path);
 
   if (hasCatch) {
     warnings.push(
-      `Field "${name}": a .catch() fallback value is not represented in the descriptor ` +
+      `Field "${location}": a .catch() fallback value is not represented in the descriptor ` +
         "(Zod stores it as a callback, not a literal) and must be re-applied downstream.",
     );
   }
@@ -418,7 +472,7 @@ function introspectField(name: string, fieldSchema: $ZodType, warnings: string[]
 
   // Check if it's a supported type
   if (!isScalarType(type) && !isCompositeType(type)) {
-    warnings.push(`Field "${name}": unsupported type "${type}", treating as string`);
+    warnings.push(`Field "${location}": unsupported type "${type}", treating as string`);
     const fallback: FieldDescriptor = {
       name,
       label,
@@ -445,9 +499,9 @@ function introspectField(name: string, fieldSchema: $ZodType, warnings: string[]
   const unknownChecks: string[] = [];
   const constraints = extractConstraints(inner, unknownChecks);
   for (const check of unknownChecks) {
-    warnings.push(formatDroppedCheck(name, check));
+    warnings.push(formatDroppedCheck(location, check));
   }
-  const metadata = buildMetadata(inner, warnings);
+  const metadata = buildMetadata(inner, warnings, path);
   const description = metaString(meta, "description");
 
   const field: FieldDescriptor = {
@@ -492,7 +546,7 @@ export function introspect(schema: $ZodType, options: IntrospectOptions): FormDe
     throw new Error(`kelex only supports z.object() schemas at the top level, got "${def.type}"`);
   }
 
-  const fields = introspectShape(def.shape, warnings);
+  const fields = introspectShape(def.shape, warnings, []);
 
   return {
     version: computeVersion(fields),
