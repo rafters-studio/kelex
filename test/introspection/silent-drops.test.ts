@@ -56,6 +56,74 @@ describe("remaining silent drops (#149)", () => {
       const descriptor = introspect(z.intersection(left, right), OPTIONS);
       expect(descriptor.warnings).toEqual([]);
     });
+
+    // #153: an intersection nested inside another intersection. The inner node
+    // is discarded once its members merge, so scanning only the root and the
+    // object leaves missed every refine attached at an intermediate level.
+    it("warns about a refine on a nested intersection", () => {
+      const extra = z.object({ z: z.boolean() });
+      const descriptor = introspect(
+        z.intersection(
+          z.intersection(left, right).refine((v) => v.x !== "", { message: "inner rule" }),
+          extra,
+        ),
+        OPTIONS,
+      );
+      expect(descriptor.warnings.some((w) => w.includes(".refine()"))).toBe(true);
+      expect(descriptor.fields.map((f) => f.name)).toEqual(["x", "y", "z"]);
+    });
+
+    it("warns at every level of a deeply nested intersection", () => {
+      const extra = z.object({ z: z.boolean() });
+      const deeper = z.object({ w: z.string() });
+      const descriptor = introspect(
+        z
+          .intersection(
+            z
+              .intersection(
+                z.intersection(left, right).refine(() => true, { message: "depth 3" }),
+                extra,
+              )
+              .refine(() => true, { message: "depth 2" }),
+            deeper,
+          )
+          .refine(() => true, { message: "depth 1" }),
+        OPTIONS,
+      );
+      const refineWarnings = descriptor.warnings.filter((w) => w.includes(".refine()"));
+      expect(refineWarnings).toHaveLength(3);
+    });
+
+    // Criterion 3: the root and object-member cases #149 already covered must
+    // still warn exactly once, not twice now that intersection nodes are scanned.
+    it("does not double-warn a refine on the root intersection", () => {
+      const descriptor = introspect(
+        z.intersection(left, right).refine(() => true, { message: "root rule" }),
+        OPTIONS,
+      );
+      expect(descriptor.warnings.filter((w) => w.includes(".refine()"))).toHaveLength(1);
+    });
+
+    it("does not double-warn a refine on an object member", () => {
+      const descriptor = introspect(
+        z.intersection(
+          left.refine(() => true, { message: "member rule" }),
+          right,
+        ),
+        OPTIONS,
+      );
+      expect(descriptor.warnings.filter((w) => w.includes(".refine()"))).toHaveLength(1);
+    });
+
+    // A non-intersection root still warns, since resolveRootSchema now owns
+    // that scan for both shapes.
+    it("still warns on a refine on a plain object root", () => {
+      const descriptor = introspect(
+        z.object({ a: z.string(), b: z.string() }).refine(() => true, { message: "obj rule" }),
+        OPTIONS,
+      );
+      expect(descriptor.warnings.filter((w) => w.includes(".refine()"))).toHaveLength(1);
+    });
   });
 
   describe("wrapper immediately before transform", () => {
