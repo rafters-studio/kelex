@@ -111,6 +111,84 @@ describe("catch handling (#154)", () => {
     expect(fields.piped.constraints.minLength).toBe(2);
   });
 
+  // Criterion 8: every case above is a TOP-LEVEL field, and introspectField
+  // recursing correctly is an assumption, not a demonstration -- the same
+  // assumption that was wrong for meta before #147. These exercise catch at
+  // depth through each composite kind.
+  it("resolves catch inside an array element's object", () => {
+    // Shape of a real bag-entry form: repeating line items, each with caught fields.
+    const fields = fieldsOf(
+      z.object({
+        bag: z.array(
+          z.object({
+            quality: z.enum(["premium", "prototype"]).catch("premium"),
+            rank: z.number().int().min(1).max(6).catch(1),
+            count: z.number().int().min(0).catch(0).meta({ title: "How many" }),
+          }),
+        ),
+      }),
+    );
+
+    const element = fields.bag.metadata;
+    if (element.kind !== "array" || element.element.metadata.kind !== "object") {
+      throw new Error("expected array of object");
+    }
+    const item = Object.fromEntries(element.element.metadata.fields.map((f) => [f.name, f]));
+
+    expect(item.quality.type).toBe("enum");
+    if (item.quality.metadata.kind !== "enum") {
+      throw new Error("expected enum metadata");
+    }
+    expect(item.quality.metadata.values).toEqual(["premium", "prototype"]);
+    expect(item.rank.constraints).toEqual({ isInt: true, min: 1, max: 6 });
+    // meta must survive the catch at depth too, not just at the top level
+    expect(item.count.label).toBe("How many");
+  });
+
+  it("resolves catch at depth through nested objects, unions, tuples and records", () => {
+    const fields = fieldsOf(
+      z.object({
+        identity: z.object({
+          origin: z.object({
+            discipline: z.object({
+              name: z.string().min(1).catch("unset").meta({ title: "Discipline" }),
+              rank: z.number().min(0).max(80).catch(0),
+            }),
+          }),
+        }),
+        loadout: z.discriminatedUnion("kind", [
+          z.object({ kind: z.literal("ship"), hull: z.number().positive().catch(1) }),
+        ]),
+        coords: z.tuple([z.number().catch(0)]),
+        stats: z.record(z.string(), z.number().min(0).catch(0)),
+      }),
+    );
+
+    const identity = fields.identity.metadata;
+    if (identity.kind !== "object") throw new Error("expected object");
+    const origin = identity.fields[0].metadata;
+    if (origin.kind !== "object") throw new Error("expected object");
+    const discipline = origin.fields[0].metadata;
+    if (discipline.kind !== "object") throw new Error("expected object");
+    // depth 4, and still a string rather than the degraded-to-string default
+    expect(discipline.fields[0].type).toBe("string");
+    expect(discipline.fields[0].label).toBe("Discipline");
+    expect(discipline.fields[1].constraints).toEqual({ min: 0, max: 80 });
+
+    const loadout = fields.loadout.metadata;
+    if (loadout.kind !== "union") throw new Error("expected union");
+    expect(loadout.variants[0].fields[1].type).toBe("number");
+
+    const coords = fields.coords.metadata;
+    if (coords.kind !== "tuple") throw new Error("expected tuple");
+    expect(coords.elements[0].type).toBe("number");
+
+    const stats = fields.stats.metadata;
+    if (stats.kind !== "record") throw new Error("expected record");
+    expect(stats.valueDescriptor.type).toBe("number");
+    expect(stats.valueDescriptor.constraints).toEqual({ min: 0 });
+  });
+
   // Criterion 7: meta must still be reachable through a catch wrapper, since
   // catch joined FLAG_WRAPPERS and the meta walk uses that same list.
   it("finds meta through a catch wrapper", () => {
