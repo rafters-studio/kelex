@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import { z } from "zod/v4";
 import { introspect } from "../../src/introspection";
 import { writeSchema } from "../../src/schema-writer/writer";
+import { architectureObject } from "../fixtures/architecture-fixture";
 import { evaluateSchemaCode } from "../helpers/evaluate-schema";
 
 const INTROSPECT_OPTS = {
@@ -427,5 +428,135 @@ describe("round-trip: schema -> introspect -> writeSchema -> eval -> introspect"
       expect(f2.isOptional).toBe(f1.isOptional);
       expect(f2.isNullable).toBe(f1.isNullable);
     }
+  });
+});
+
+/**
+ * The cases above assert field-by-field, so a constraint the writer never
+ * emitted passed by simply not being looked at -- which is how the writer
+ * stayed lossy while the suite was green. These compare whole descriptors.
+ */
+describe("writer re-emit parity (#148)", () => {
+  // Criterion 1: the canonical adversarial fixture, whole.
+  it("round-trips the canonical fixture with every field identical", () => {
+    const { descriptor1, descriptor2 } = roundTrip(architectureObject);
+    expect(descriptor2.fields).toEqual(descriptor1.fields);
+  });
+
+  // Criterion 2: exclusive bounds. Emitting .min()/.max() for these turns
+  // .positive() into .nonnegative() -- the boundary moves by one, silently.
+  it("preserves exclusive vs inclusive numeric bounds", () => {
+    const { descriptor1, descriptor2, code } = roundTrip(
+      z.object({
+        exclusiveMin: z.number().gt(5),
+        inclusiveMin: z.number().gte(5),
+        exclusiveMax: z.number().lt(10),
+        inclusiveMax: z.number().lte(10),
+        positive: z.number().positive(),
+        nonneg: z.number().nonnegative(),
+      }),
+    );
+    expect(code).toContain(".gt(5)");
+    expect(code).toContain(".lt(10)");
+    expect(descriptor2.fields).toEqual(descriptor1.fields);
+
+    const byName = Object.fromEntries(descriptor2.fields.map((f) => [f.name, f]));
+    expect(byName.positive.constraints).toEqual({ min: 0, minExclusive: true });
+    expect(byName.nonneg.constraints).toEqual({ min: 0 });
+    expect(byName.positive.constraints).not.toEqual(byName.nonneg.constraints);
+  });
+
+  // Criterion 3: exact length, prefix, suffix.
+  it("preserves exact length, startsWith and endsWith", () => {
+    const { descriptor1, descriptor2 } = roundTrip(
+      z.object({
+        code: z.string().length(6),
+        prefixed: z.string().startsWith("ID-"),
+        suffixed: z.string().endsWith(".png"),
+        both: z.string().startsWith("a").endsWith("z"),
+        sizedList: z.array(z.string()).length(3),
+      }),
+    );
+    expect(descriptor2.fields).toEqual(descriptor1.fields);
+  });
+
+  // Criterion 4: defaults survive the trip out as well as in.
+  it("preserves defaults of every JSON-shaped kind", () => {
+    const { descriptor1, descriptor2 } = roundTrip(
+      z.object({
+        str: z.string().default("hello"),
+        num: z.number().default(42),
+        bool: z.boolean().default(true),
+        enumerated: z.enum(["a", "b"]).default("b"),
+        list: z.array(z.string()).default([]),
+        nested: z.object({ a: z.string() }).default({ a: "x" }),
+        withConstraints: z.string().min(2).max(8).default("mid"),
+      }),
+    );
+    expect(descriptor2.fields).toEqual(descriptor1.fields);
+  });
+
+  // Criterion 5 (the #147 seam): the reader now captures meta, so the writer
+  // must re-emit it or the round trip is lossy on the field #147 just added.
+  it("preserves the full .meta() payload", () => {
+    const { descriptor1, descriptor2, code } = roundTrip(
+      z.object({
+        annotated: z.string().meta({
+          title: "Annotated",
+          description: "with detail",
+          examples: ["one"],
+          deprecated: false,
+        }),
+        described: z.string().describe("plain"),
+      }),
+    );
+    expect(code).toContain(".meta(");
+    expect(descriptor2.fields).toEqual(descriptor1.fields);
+
+    const byName = Object.fromEntries(descriptor2.fields.map((f) => [f.name, f]));
+    expect(byName.annotated.label).toBe("Annotated");
+    expect(byName.annotated.meta).toEqual({
+      title: "Annotated",
+      description: "with detail",
+      examples: ["one"],
+      deprecated: false,
+    });
+    expect(byName.described.description).toBe("plain");
+  });
+
+  // Criterion 6: constraints nested inside composites, not just at top level.
+  it("round-trips constraints nested inside objects, arrays, tuples and unions", () => {
+    const { descriptor1, descriptor2 } = roundTrip(
+      z.object({
+        nested: z.object({ deep: z.object({ value: z.string().min(2).meta({ title: "V" }) }) }),
+        list: z.array(z.string().length(3)).min(1).max(5),
+        pair: z.tuple([z.string().startsWith("x"), z.number().gt(0)]),
+        choice: z.discriminatedUnion("kind", [
+          z.object({ kind: z.literal("a"), count: z.number().int().lt(9) }),
+          z.object({ kind: z.literal("b"), label: z.string().max(4).default("bb") }),
+        ]),
+      }),
+    );
+    expect(descriptor2.fields).toEqual(descriptor1.fields);
+  });
+
+  // Criterion 7: what the writer cannot reproduce must warn, never pass silently.
+  it("warns instead of silently narrowing a record key", () => {
+    const descriptor = introspect(z.object({ lookup: z.record(z.string(), z.number()) }), {
+      ...INTROSPECT_OPTS,
+    });
+    const { warnings } = writeSchema({ form: descriptor });
+    expect(warnings.some((w) => w.includes("record key"))).toBe(true);
+  });
+
+  it("warns instead of silently corrupting a non-JSON default", () => {
+    const descriptor = introspect(z.object({ when: z.date() }), INTROSPECT_OPTS);
+    descriptor.fields[0].defaultValue = new Date("2020-01-01");
+
+    const { code, warnings } = writeSchema({ form: descriptor });
+    expect(warnings.some((w) => w.includes("not a JSON literal"))).toBe(true);
+    // A Date would stringify to a quoted string and re-read as a string default
+    // on a date field. Omitting it and saying so beats a silent type change.
+    expect(code).not.toContain(".default(");
   });
 });
