@@ -15,9 +15,11 @@ export type {
 
 export { extractConstraints, introspect, unwrapSchema } from "./introspection";
 
-export type { ComponentConfig, ComponentType, MappingRule } from "./mapping";
-
-export { defaultMappingRules, findMatchingRule, resolveField } from "./mapping";
+// The mapping module (resolveField, findMatchingRule, defaultMappingRules,
+// ComponentConfig, ComponentType, MappingRule) is deliberately NOT exported.
+// kelex does not own component selection -- which component renders a field is
+// the consumer's decision, along with the rest of the presentation layer. The
+// module remains in-tree but is not public API; see #155.
 
 export type { SchemaWriterOptions, SchemaWriterResult } from "./schema-writer";
 
