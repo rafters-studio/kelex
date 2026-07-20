@@ -49,7 +49,9 @@ function inferTypeName(schemaExportName: string): string {
  *   export type Foo = z.infer<typeof fooSchema>;
  */
 function emitSchemaDeclaration(form: FormDescriptor, warnings?: string[]): string[] {
-  const fieldEntries = form.fields.map((field) => `  ${field.name}: ${emitField(field, warnings)},`);
+  const fieldEntries = form.fields.map(
+    (field) => `  ${field.name}: ${emitField(field, warnings)},`,
+  );
 
   const typeName = inferTypeName(form.schemaExportName);
 
