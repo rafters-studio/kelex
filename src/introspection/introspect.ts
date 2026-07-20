@@ -126,9 +126,11 @@ function resolveRootSchema(schema: $ZodType): {
   warnings: string[];
 } {
   const def = schema._zod.def as { type: string };
+  const warnings: string[] = [];
 
   if (def.type === "intersection") {
-    const warnings: string[] = [];
+    // flattenIntersection scans every level for refinements, root included, so
+    // the root must NOT be scanned again by the caller.
     const shape = flattenIntersection(schema, warnings);
     // Build a synthetic object-like schema view
     return {
@@ -137,7 +139,11 @@ function resolveRootSchema(schema: $ZodType): {
     };
   }
 
-  return { resolved: schema, warnings: [] };
+  // Non-intersection root: its own checks are still on it, so scan here. This
+  // function owns root-refinement warnings for both shapes, which is what keeps
+  // the intersection case from being warned about twice.
+  warnObjectRefinements(schema, warnings);
+  return { resolved: schema, warnings };
 }
 
 /**
@@ -148,6 +154,10 @@ function flattenIntersection(schema: $ZodType, warnings: string[]): Record<strin
   const def = schema._zod.def as { type: string };
 
   if (def.type === "intersection") {
+    // An intersection's own .refine() lives on the intersection node, and the
+    // node is discarded once its members are merged into a shape. Scanning only
+    // the object leaves misses every refine attached at an intersection level.
+    warnObjectRefinements(schema, warnings);
     const intDef = def as unknown as ZodIntersectionDef;
     const leftShape = flattenIntersection(intDef.left, warnings);
     const rightShape = flattenIntersection(intDef.right, warnings);
@@ -472,11 +482,6 @@ export function introspect(schema: $ZodType, options: IntrospectOptions): FormDe
   if (def.type !== "object") {
     throw new Error(`kelex only supports z.object() schemas at the top level, got "${def.type}"`);
   }
-
-  // Scan the ORIGINAL schema, not the resolved one: for an intersection the
-  // resolved schema is a synthetic object carrying only the merged shape, so
-  // the intersection's own .refine() checks are not on it to be found.
-  warnObjectRefinements(schema, warnings);
 
   const fields = introspectShape(def.shape, warnings);
 
