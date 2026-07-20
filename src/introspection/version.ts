@@ -1,4 +1,4 @@
-import { createHash } from "node:crypto";
+import { sha256Hex } from "./sha256";
 import type { FieldDescriptor, FormDescriptor } from "./types";
 
 /**
@@ -57,7 +57,7 @@ function canonicalize(value: unknown): unknown {
  */
 export function computeVersion(fields: FieldDescriptor[]): string {
   const canonical = JSON.stringify(canonicalize(fields));
-  return createHash("sha256").update(canonical, "utf8").digest("hex").slice(0, 16);
+  return sha256Hex(canonical).slice(0, 16);
 }
 
 /** Recomputes the version for a descriptor whose fields may have been edited. */
