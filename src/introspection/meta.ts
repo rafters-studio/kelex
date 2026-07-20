@@ -1,9 +1,9 @@
 import { globalRegistry } from "zod/v4/core";
 import type { $ZodType } from "zod/v4/core";
+import { FLAG_WRAPPERS } from "./unwrap";
 
 /**
- * Returns the schema one level in, for the wrapper kinds the reader traverses
- * (`unwrapSchema` peels optional/nullable/default, `peelPipe` peels pipe).
+ * Returns the schema one level in, for the wrapper kinds the reader traverses.
  * Returns undefined at the first non-wrapper.
  */
 function innerSchema(schema: $ZodType): $ZodType | undefined {
@@ -16,7 +16,7 @@ function innerSchema(schema: $ZodType): $ZodType | undefined {
   if (def.type === "pipe") {
     return def.in;
   }
-  if (def.type === "optional" || def.type === "nullable" || def.type === "default") {
+  if (FLAG_WRAPPERS.has(def.type)) {
     return def.innerType;
   }
   return undefined;

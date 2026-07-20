@@ -1,5 +1,16 @@
 import type { $ZodType } from "zod/v4/core";
 
+/**
+ * Wrapper defs that carry a presence flag or a default and hold their inner
+ * schema under `innerType`.
+ *
+ * Single source of truth: this list is consumed both here (to peel the
+ * wrappers) and by the meta walk (to visit every level of the chain). Zod
+ * registers meta against the schema INSTANCE, so a level missing from this
+ * list is a level whose meta is never read -- the silent-drop class #149 was.
+ */
+export const FLAG_WRAPPERS: ReadonlySet<string> = new Set(["optional", "nullable", "default"]);
+
 export interface UnwrapResult {
   /** The innermost non-wrapper schema */
   inner: $ZodType;
@@ -56,11 +67,7 @@ export function unwrapSchema(schema: $ZodType): UnwrapResult {
   let defaultValue: unknown;
 
   // Unwrap nested optional/nullable/default wrappers
-  while (
-    current._zod.def.type === "optional" ||
-    current._zod.def.type === "nullable" ||
-    current._zod.def.type === "default"
-  ) {
+  while (FLAG_WRAPPERS.has(current._zod.def.type)) {
     if (current._zod.def.type === "optional") {
       isOptional = true;
     } else if (current._zod.def.type === "nullable") {
