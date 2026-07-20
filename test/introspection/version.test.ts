@@ -29,6 +29,20 @@ describe("descriptor content version (#143)", () => {
     expect(versionOf(architectureObject)).toMatch(/^[0-9a-f]{16}$/);
   });
 
+  // Pinned in #165, when the digest moved from node:crypto to a dependency-free
+  // implementation so the library could run outside Node. Every other assertion
+  // here is relational -- "this changes, that does not" -- so all of them would
+  // still pass if the hash function were swapped for a different one and every
+  // published version silently rerolled. This is the one that would not.
+  //
+  // The value was taken from main BEFORE the swap and verified identical after.
+  // If a change moves it, that is a breaking change for every consumer pinned
+  // against a descriptor version, and it needs a deliberate decision rather
+  // than an updated expectation.
+  it("produces the exact hash published for the canonical fixture", () => {
+    expect(versionOf(architectureObject)).toBe("11617b63d9d43a33");
+  });
+
   // Criterion 2: cosmetic options must not churn the version, or every consumer
   // re-pins because someone renamed the generated component.
   it("ignores formName, import path and export name", () => {
