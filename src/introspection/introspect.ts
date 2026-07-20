@@ -1,5 +1,6 @@
 import type { $ZodType } from "zod/v4/core";
 import { extractConstraints } from "./checks";
+import { collectMeta, metaString } from "./meta";
 import type { FieldDescriptor, FieldMetadata, FieldType, FormDescriptor } from "./types";
 import { unwrapSchema } from "./unwrap";
 
@@ -354,19 +355,30 @@ function introspectField(name: string, fieldSchema: $ZodType, warnings: string[]
   // Peel pipe/transform once so type, constraints, and metadata share one inner schema.
   const inner = peelPipe(unwrapped);
   const type = resolveType(inner);
+  // Read meta from the ORIGINAL schema: the payload may sit on any wrapper in
+  // the chain, and the unwrapped inner is only one of those instances.
+  const meta = collectMeta(fieldSchema);
+  const label = metaString(meta, "title") ?? nameToLabel(name);
 
   // Check if it's a supported type
   if (!isScalarType(type) && !isCompositeType(type)) {
     warnings.push(`Field "${name}": unsupported type "${type}", treating as string`);
     const fallback: FieldDescriptor = {
       name,
-      label: nameToLabel(name),
+      label,
       type: "string",
       isOptional,
       isNullable,
       constraints: {},
       metadata: { kind: "string" },
     };
+    const fallbackDescription = metaString(meta, "description");
+    if (fallbackDescription) {
+      fallback.description = fallbackDescription;
+    }
+    if (meta) {
+      fallback.meta = meta;
+    }
     if (defaultValue !== undefined) {
       fallback.defaultValue = defaultValue;
     }
@@ -380,11 +392,11 @@ function introspectField(name: string, fieldSchema: $ZodType, warnings: string[]
     warnings.push(formatDroppedCheck(name, check));
   }
   const metadata = buildMetadata(inner, warnings);
-  const description = (inner as { description?: string }).description;
+  const description = metaString(meta, "description");
 
   const field: FieldDescriptor = {
     name,
-    label: nameToLabel(name),
+    label,
     type: fieldType,
     isOptional,
     isNullable,
@@ -394,6 +406,10 @@ function introspectField(name: string, fieldSchema: $ZodType, warnings: string[]
 
   if (description) {
     field.description = description;
+  }
+
+  if (meta) {
+    field.meta = meta;
   }
 
   if (defaultValue !== undefined) {
