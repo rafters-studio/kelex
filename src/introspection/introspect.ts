@@ -2,7 +2,7 @@ import type { $ZodType } from "zod/v4/core";
 import { extractConstraints } from "./checks";
 import { collectMeta, metaString } from "./meta";
 import type { FieldDescriptor, FieldMetadata, FieldType, FormDescriptor } from "./types";
-import { unwrapSchema } from "./unwrap";
+import { type UnwrapResult, unwrapSchema } from "./unwrap";
 
 export interface IntrospectOptions {
   /** Name for the generated form component */
@@ -161,6 +161,9 @@ function flattenIntersection(schema: $ZodType, warnings: string[]): Record<strin
   }
 
   if (def.type === "object") {
+    // A member's own .refine() lives on the member, and only its shape survives
+    // the merge -- surface it here or it vanishes with the wrapper.
+    warnObjectRefinements(schema, warnings);
     const objDef = def as unknown as ZodObjectDef;
     return { ...objDef.shape };
   }
@@ -320,6 +323,39 @@ function peelPipe(schema: $ZodType): $ZodType {
 }
 
 /**
+ * Alternates unwrapping (optional/nullable/default) and pipe-peeling until
+ * neither applies.
+ *
+ * One pass in a fixed order misses the other's wrapper: in
+ * `z.string().min(3).optional().transform(fn)` the optional sits INSIDE the
+ * pipe, so unwrap-then-peel leaves the optional wrapper as the resolved inner
+ * schema -- the field reads as an unsupported "optional" type, loses its
+ * constraints, and reports isOptional false.
+ */
+function resolveInner(schema: $ZodType): UnwrapResult {
+  let current = schema;
+  let isOptional = false;
+  let isNullable = false;
+  let defaultValue: unknown;
+
+  for (;;) {
+    const result = unwrapSchema(current);
+    isOptional = isOptional || result.isOptional;
+    isNullable = isNullable || result.isNullable;
+    // Outermost default wins: it is the last one the author wrote.
+    if (defaultValue === undefined) {
+      defaultValue = result.defaultValue;
+    }
+
+    const peeled = peelPipe(result.inner);
+    if (peeled === result.inner) {
+      return { inner: peeled, isOptional, isNullable, defaultValue };
+    }
+    current = peeled;
+  }
+}
+
+/**
  * Resolves the effective type string from an unwrapped, pipe-peeled schema def.
  * Handles Zod v4 top-level format shortcuts (z.email() -> string with format).
  */
@@ -351,9 +387,9 @@ function resolveType(inner: $ZodType): string {
  * Introspects a single field schema into a FieldDescriptor.
  */
 function introspectField(name: string, fieldSchema: $ZodType, warnings: string[]): FieldDescriptor {
-  const { inner: unwrapped, isOptional, isNullable, defaultValue } = unwrapSchema(fieldSchema);
-  // Peel pipe/transform once so type, constraints, and metadata share one inner schema.
-  const inner = peelPipe(unwrapped);
+  // Resolve wrappers and pipes together so type, constraints, and metadata all
+  // derive from one inner schema regardless of the order the author chained them.
+  const { inner, isOptional, isNullable, defaultValue } = resolveInner(fieldSchema);
   const type = resolveType(inner);
   // Read meta from the ORIGINAL schema: the payload may sit on any wrapper in
   // the chain, and the unwrapped inner is only one of those instances.
@@ -436,8 +472,10 @@ export function introspect(schema: $ZodType, options: IntrospectOptions): FormDe
     throw new Error(`kelex only supports z.object() schemas at the top level, got "${def.type}"`);
   }
 
-  // Surface cross-field refinements on the top-level object (dropped otherwise).
-  warnObjectRefinements(resolved, warnings);
+  // Scan the ORIGINAL schema, not the resolved one: for an intersection the
+  // resolved schema is a synthetic object carrying only the merged shape, so
+  // the intersection's own .refine() checks are not on it to be found.
+  warnObjectRefinements(schema, warnings);
 
   const fields = introspectShape(def.shape, warnings);
 
