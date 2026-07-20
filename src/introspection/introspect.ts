@@ -337,12 +337,14 @@ function resolveInner(schema: $ZodType): UnwrapResult {
   let current = schema;
   let isOptional = false;
   let isNullable = false;
+  let hasCatch = false;
   let defaultValue: unknown;
 
   for (;;) {
     const result = unwrapSchema(current);
     isOptional = isOptional || result.isOptional;
     isNullable = isNullable || result.isNullable;
+    hasCatch = hasCatch || result.hasCatch;
     // Outermost default wins: it is the last one the author wrote.
     if (defaultValue === undefined) {
       defaultValue = result.defaultValue;
@@ -350,7 +352,7 @@ function resolveInner(schema: $ZodType): UnwrapResult {
 
     const peeled = peelPipe(result.inner);
     if (peeled === result.inner) {
-      return { inner: peeled, isOptional, isNullable, defaultValue };
+      return { inner: peeled, isOptional, isNullable, defaultValue, hasCatch };
     }
     current = peeled;
   }
@@ -390,8 +392,15 @@ function resolveType(inner: $ZodType): string {
 function introspectField(name: string, fieldSchema: $ZodType, warnings: string[]): FieldDescriptor {
   // Resolve wrappers and pipes together so type, constraints, and metadata all
   // derive from one inner schema regardless of the order the author chained them.
-  const { inner, isOptional, isNullable, defaultValue } = resolveInner(fieldSchema);
+  const { inner, isOptional, isNullable, defaultValue, hasCatch } = resolveInner(fieldSchema);
   const type = resolveType(inner);
+
+  if (hasCatch) {
+    warnings.push(
+      `Field "${name}": a .catch() fallback value is not represented in the descriptor ` +
+        "(Zod stores it as a callback, not a literal) and must be re-applied downstream.",
+    );
+  }
   // Read meta from the ORIGINAL schema: the payload may sit on any wrapper in
   // the chain, and the unwrapped inner is only one of those instances.
   const meta = collectMeta(fieldSchema);
