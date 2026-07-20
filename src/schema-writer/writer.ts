@@ -13,19 +13,20 @@ export function writeSchema(options: SchemaWriterOptions): SchemaWriterResult {
   const { form, embeddedSchemas } = options;
 
   const lines: string[] = ['import { z } from "zod/v4";', ""];
+  const warnings: string[] = [];
 
   if (embeddedSchemas && embeddedSchemas.length > 0) {
     const sorted = topologicalSort(embeddedSchemas);
     for (const schema of sorted) {
-      lines.push(...emitSchemaDeclaration(schema.form));
+      lines.push(...emitSchemaDeclaration(schema.form, warnings));
       lines.push("");
     }
   }
 
-  lines.push(...emitSchemaDeclaration(form));
+  lines.push(...emitSchemaDeclaration(form, warnings));
   lines.push("");
 
-  return { code: lines.join("\n"), warnings: [] };
+  return { code: lines.join("\n"), warnings };
 }
 
 /**
@@ -47,8 +48,10 @@ function inferTypeName(schemaExportName: string): string {
  *   export const fooSchema = z.object({ ... });
  *   export type Foo = z.infer<typeof fooSchema>;
  */
-function emitSchemaDeclaration(form: FormDescriptor): string[] {
-  const fieldEntries = form.fields.map((field) => `  ${field.name}: ${emitField(field)},`);
+function emitSchemaDeclaration(form: FormDescriptor, warnings?: string[]): string[] {
+  const fieldEntries = form.fields.map(
+    (field) => `  ${field.name}: ${emitField(field, warnings)},`,
+  );
 
   const typeName = inferTypeName(form.schemaExportName);
 

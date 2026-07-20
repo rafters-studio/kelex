@@ -649,7 +649,11 @@ describe("emitField", () => {
       expect(emitField(field)).toBe("addressSchema.nullable().optional()");
     });
 
-    it("ignores description when schemaRef is set", () => {
+    // Behavior change in #148: this previously emitted a bare "addressSchema".
+    // A schemaRef suppresses the schema BODY, not the field's own annotations --
+    // dropping a description the descriptor carries is a silent round-trip loss,
+    // and `ref.describe(...)` returns a new schema rather than mutating the ref.
+    it("keeps description when schemaRef is set", () => {
       const field = makeField({
         name: "address",
         type: "object",
@@ -657,7 +661,7 @@ describe("emitField", () => {
         metadata: { kind: "object", fields: [] },
         schemaRef: "addressSchema",
       });
-      expect(emitField(field)).toBe("addressSchema");
+      expect(emitField(field)).toBe('addressSchema.describe("Mailing address")');
     });
 
     it("throws on schemaRef with spaces", () => {

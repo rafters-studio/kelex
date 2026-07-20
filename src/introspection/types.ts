@@ -63,11 +63,22 @@ export interface FieldDescriptor {
   /** Original key name from schema shape */
   name: string;
 
-  /** Human-readable label derived from name */
+  /**
+   * Human-readable label. Taken from `.meta({ title })` when the schema author
+   * set one; otherwise derived from `name`.
+   */
   label: string;
 
-  /** Description from schema.describe() */
+  /** Description from `.meta({ description })` or `.describe()` */
   description?: string;
+
+  /**
+   * The full `.meta()`/`.describe()` payload, verbatim. Zod 4 keeps this in
+   * `globalRegistry` rather than the schema def, and it is an open record --
+   * carrying it whole (not just `title`/`description`) keeps presentation
+   * metadata lossless through the round trip.
+   */
+  meta?: Record<string, unknown>;
 
   /** Core type after unwrapping optional/nullable */
   type: FieldType;
@@ -116,6 +127,15 @@ export interface FormStep {
 
 /** Complete form descriptor */
 export interface FormDescriptor {
+  /**
+   * Deterministic content hash of the fields -- the descriptor's data contract.
+   * Identical schemas hash identically and any contract change produces a new
+   * value with no human bump, so consumers can pin against it and detect
+   * schema evolution on their own. Presentation and cosmetic options are
+   * excluded; see `computeVersion`.
+   */
+  version: string;
+
   /** Form name for the generated component */
   name: string;
 

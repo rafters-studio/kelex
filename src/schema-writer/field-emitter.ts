@@ -21,8 +21,10 @@ const SUPPORTED_TYPES = new Set([
  * chaining but without re-emitting the full schema body.
  * All field types are now supported.
  */
-export function emitField(field: FieldDescriptor): string {
-  // Named schema reference: emit validated identifier, chain optional/nullable.
+export function emitField(field: FieldDescriptor, warnings?: string[]): string {
+  let expr: string;
+
+  // Named schema reference: emit validated identifier without the schema body.
   if (field.schemaRef) {
     if (!VALID_IDENTIFIER.test(field.schemaRef)) {
       throw new Error(
@@ -30,20 +32,16 @@ export function emitField(field: FieldDescriptor): string {
           "schemaRef must be a valid JavaScript identifier.",
       );
     }
-    let expr = field.schemaRef;
-    if (field.isNullable) expr += ".nullable()";
-    if (field.isOptional) expr += ".optional()";
-    return expr;
+    expr = field.schemaRef;
+  } else {
+    if (!SUPPORTED_TYPES.has(field.type)) {
+      throw new Error(
+        `Unsupported field type "${field.type}" for field "${field.name}". ` +
+          "Only string, number, boolean, date, enum, array, tuple, object, record, and union are supported.",
+      );
+    }
+    expr = emitBaseExpression(field, warnings);
   }
-
-  if (!SUPPORTED_TYPES.has(field.type)) {
-    throw new Error(
-      `Unsupported field type "${field.type}" for field "${field.name}". ` +
-        "Only string, number, boolean, date, enum, array, tuple, object, record, and union are supported.",
-    );
-  }
-
-  let expr = emitBaseExpression(field);
 
   if (field.isNullable) {
     expr += ".nullable()";
@@ -53,14 +51,96 @@ export function emitField(field: FieldDescriptor): string {
     expr += ".optional()";
   }
 
-  if (field.description) {
-    expr += `.describe(${JSON.stringify(field.description)})`;
-  }
+  expr += emitDefault(field, warnings);
+  expr += emitMeta(field, warnings);
 
   return expr;
 }
 
-function emitBaseExpression(field: FieldDescriptor): string {
+/**
+ * Emits `.default(value)` for a captured default. Applied after
+ * optional/nullable so the wrapper order matches what the reader unwraps.
+ */
+function emitDefault(field: FieldDescriptor, warnings?: string[]): string {
+  if (field.defaultValue === undefined) {
+    return "";
+  }
+
+  const literal = emitLiteral(field.defaultValue);
+  if (literal === undefined) {
+    warnings?.push(
+      `Field "${field.name}": default value is not a JSON literal (e.g. a Date or class instance) ` +
+        "and was not re-emitted; re-apply the .default() by hand.",
+    );
+    return "";
+  }
+
+  return `.default(${literal})`;
+}
+
+/**
+ * Emits the `.meta()` payload, falling back to `.describe()` for descriptors
+ * built by hand with only a description. Meta already contains `description`,
+ * so emitting both would duplicate it.
+ */
+function emitMeta(field: FieldDescriptor, warnings?: string[]): string {
+  if (field.meta && Object.keys(field.meta).length > 0) {
+    const literal = emitLiteral(field.meta);
+    if (literal === undefined) {
+      warnings?.push(
+        `Field "${field.name}": .meta() payload is not JSON-serializable and was not re-emitted.`,
+      );
+      return "";
+    }
+    return `.meta(${literal})`;
+  }
+
+  if (field.description) {
+    return `.describe(${JSON.stringify(field.description)})`;
+  }
+
+  return "";
+}
+
+/**
+ * Renders a value as a source literal, or undefined when it cannot survive the
+ * trip. Anything not JSON-shaped (Date, Map, class instance) would stringify
+ * into something that re-reads as a different type -- a silent corruption, so
+ * the caller warns instead.
+ */
+function emitLiteral(value: unknown): string | undefined {
+  if (!isJsonSafe(value)) {
+    return undefined;
+  }
+  return JSON.stringify(value);
+}
+
+function isJsonSafe(value: unknown): boolean {
+  if (value === null) {
+    return true;
+  }
+
+  const type = typeof value;
+  if (type === "string" || type === "number" || type === "boolean") {
+    return Number.isNaN(value) ? false : true;
+  }
+
+  if (Array.isArray(value)) {
+    return value.every(isJsonSafe);
+  }
+
+  if (type === "object") {
+    const proto = Object.getPrototypeOf(value);
+    if (proto !== Object.prototype && proto !== null) {
+      return false;
+    }
+    return Object.values(value as Record<string, unknown>).every(isJsonSafe);
+  }
+
+  return false;
+}
+
+function emitBaseExpression(field: FieldDescriptor, warnings?: string[]): string {
   switch (field.type) {
     case "string":
       return emitString(field);
@@ -73,15 +153,15 @@ function emitBaseExpression(field: FieldDescriptor): string {
     case "enum":
       return emitEnum(field);
     case "array":
-      return emitArray(field);
+      return emitArray(field, warnings);
     case "tuple":
-      return emitTuple(field);
+      return emitTuple(field, warnings);
     case "object":
-      return emitObject(field);
+      return emitObject(field, warnings);
     case "record":
-      return emitRecord(field);
+      return emitRecord(field, warnings);
     case "union":
-      return emitUnion(field);
+      return emitUnion(field, warnings);
     default:
       throw new Error(`Unexpected field type: ${field.type}`);
   }
@@ -119,6 +199,15 @@ function emitString(field: FieldDescriptor): string {
   if (constraints.maxLength !== undefined) {
     base += `.max(${constraints.maxLength})`;
   }
+  if (constraints.length !== undefined) {
+    base += `.length(${constraints.length})`;
+  }
+  if (constraints.startsWith !== undefined) {
+    base += `.startsWith(${JSON.stringify(constraints.startsWith)})`;
+  }
+  if (constraints.endsWith !== undefined) {
+    base += `.endsWith(${JSON.stringify(constraints.endsWith)})`;
+  }
   if (constraints.pattern !== undefined) {
     base += `.regex(/${constraints.pattern}/)`;
   }
@@ -137,11 +226,14 @@ function emitNumber(field: FieldDescriptor): string {
   if (constraints.isInt) {
     base += ".int()";
   }
+  // .min()/.max() are the inclusive bounds; exclusive ones must emit .gt()/.lt()
+  // or .positive() round-trips back as .nonnegative() -- an off-by-one at the
+  // validation boundary, not a cosmetic difference.
   if (constraints.min !== undefined) {
-    base += `.min(${constraints.min})`;
+    base += constraints.minExclusive ? `.gt(${constraints.min})` : `.min(${constraints.min})`;
   }
   if (constraints.max !== undefined) {
-    base += `.max(${constraints.max})`;
+    base += constraints.maxExclusive ? `.lt(${constraints.max})` : `.max(${constraints.max})`;
   }
   if (constraints.step !== undefined) {
     base += `.multipleOf(${constraints.step})`;
@@ -161,14 +253,14 @@ function emitEnum(field: FieldDescriptor): string {
   return `z.enum([${values}])`;
 }
 
-function emitArray(field: FieldDescriptor): string {
+function emitArray(field: FieldDescriptor, warnings?: string[]): string {
   if (field.metadata.kind !== "array") {
     throw new Error(
       `Field "${field.name}" has type "array" but metadata kind is "${field.metadata.kind}"`,
     );
   }
 
-  const elementExpr = emitField(field.metadata.element);
+  const elementExpr = emitField(field.metadata.element, warnings);
   let base = `z.array(${elementExpr})`;
 
   if (field.constraints.minItems !== undefined) {
@@ -177,22 +269,26 @@ function emitArray(field: FieldDescriptor): string {
   if (field.constraints.maxItems !== undefined) {
     base += `.max(${field.constraints.maxItems})`;
   }
+  // z.array(x).length(n) reads as length_equals, the same check as the string form.
+  if (field.constraints.length !== undefined) {
+    base += `.length(${field.constraints.length})`;
+  }
 
   return base;
 }
 
-function emitTuple(field: FieldDescriptor): string {
+function emitTuple(field: FieldDescriptor, warnings?: string[]): string {
   if (field.metadata.kind !== "tuple") {
     throw new Error(
       `Field "${field.name}" has type "tuple" but metadata kind is "${field.metadata.kind}"`,
     );
   }
 
-  const elements = field.metadata.elements.map((el) => emitField(el)).join(", ");
+  const elements = field.metadata.elements.map((el) => emitField(el, warnings)).join(", ");
   return `z.tuple([${elements}])`;
 }
 
-function emitObject(field: FieldDescriptor): string {
+function emitObject(field: FieldDescriptor, warnings?: string[]): string {
   if (field.metadata.kind !== "object") {
     throw new Error(
       `Field "${field.name}" has type "object" but metadata kind is "${field.metadata.kind}"`,
@@ -201,23 +297,31 @@ function emitObject(field: FieldDescriptor): string {
 
   const entries = field.metadata.fields.map((child) => {
     const key = VALID_IDENTIFIER.test(child.name) ? child.name : JSON.stringify(child.name);
-    return `${key}: ${emitField(child)}`;
+    return `${key}: ${emitField(child, warnings)}`;
   });
   return `z.object({ ${entries.join(", ")} })`;
 }
 
-function emitRecord(field: FieldDescriptor): string {
+function emitRecord(field: FieldDescriptor, warnings?: string[]): string {
   if (field.metadata.kind !== "record") {
     throw new Error(
       `Field "${field.name}" has type "record" but metadata kind is "${field.metadata.kind}"`,
     );
   }
 
-  const valueExpr = emitField(field.metadata.valueDescriptor);
+  // The descriptor carries no key schema (the reader warns and keeps only the
+  // value), so the key is always re-emitted as a plain z.string(). A narrowed
+  // key -- z.record(z.enum([...]), v) -- cannot be reconstructed from here.
+  warnings?.push(
+    `Field "${field.name}": record key re-emitted as z.string(); a narrower key schema ` +
+      "is not carried by the descriptor and must be re-applied by hand.",
+  );
+
+  const valueExpr = emitField(field.metadata.valueDescriptor, warnings);
   return `z.record(z.string(), ${valueExpr})`;
 }
 
-function emitUnion(field: FieldDescriptor): string {
+function emitUnion(field: FieldDescriptor, warnings?: string[]): string {
   if (field.metadata.kind !== "union") {
     throw new Error(
       `Field "${field.name}" has type "union" but metadata kind is "${field.metadata.kind}"`,
@@ -227,15 +331,16 @@ function emitUnion(field: FieldDescriptor): string {
   const { discriminator, variants } = field.metadata;
 
   if (discriminator !== undefined) {
-    return emitDiscriminatedUnion(discriminator, variants);
+    return emitDiscriminatedUnion(discriminator, variants, warnings);
   }
 
-  return emitPlainUnion(variants);
+  return emitPlainUnion(variants, warnings);
 }
 
 function emitDiscriminatedUnion(
   discriminator: string,
   variants: { value: string; fields: FieldDescriptor[] }[],
+  warnings?: string[],
 ): string {
   const variantExprs = variants.map((variant) => {
     const entries = variant.fields.map((child) => {
@@ -243,7 +348,7 @@ function emitDiscriminatedUnion(
       if (child.name === discriminator) {
         return `${child.name}: z.literal(${JSON.stringify(variant.value)})`;
       }
-      return `${child.name}: ${emitField(child)}`;
+      return `${child.name}: ${emitField(child, warnings)}`;
     });
     return `z.object({ ${entries.join(", ")} })`;
   });
@@ -251,7 +356,10 @@ function emitDiscriminatedUnion(
   return `z.discriminatedUnion(${JSON.stringify(discriminator)}, [${variantExprs.join(", ")}])`;
 }
 
-function emitPlainUnion(variants: { value: string; fields: FieldDescriptor[] }[]): string {
+function emitPlainUnion(
+  variants: { value: string; fields: FieldDescriptor[] }[],
+  warnings?: string[],
+): string {
   const optionExprs = variants.map((variant) => {
     // Heuristic: the introspector wraps non-object union members in synthetic
     // single-field objects named "variant_N" / "option_N" (see introspect.ts
@@ -263,10 +371,10 @@ function emitPlainUnion(variants: { value: string; fields: FieldDescriptor[] }[]
       variant.fields[0].name.startsWith("option_");
 
     if (isSyntheticScalar) {
-      return emitField(variant.fields[0]);
+      return emitField(variant.fields[0], warnings);
     }
 
-    const entries = variant.fields.map((child) => `${child.name}: ${emitField(child)}`);
+    const entries = variant.fields.map((child) => `${child.name}: ${emitField(child, warnings)}`);
     return `z.object({ ${entries.join(", ")} })`;
   });
 
