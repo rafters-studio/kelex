@@ -23,13 +23,97 @@ export interface UnwrapResult {
   isOptional: boolean;
   /** Whether z.nullable() was present */
   isNullable: boolean;
-  /** Default value from z.default(), captured before the wrapper is peeled */
+  /**
+   * Default value from the OUTERMOST z.default(), captured before the wrapper is
+   * peeled -- and only when it is verifiably stable (see `readStableDefault`).
+   * Undefined when there was no default, or the default was a varying function.
+   */
   defaultValue?: unknown;
+  /** Whether any z.default() wrapper was present (stable or not). */
+  hasDefault: boolean;
+  /**
+   * Whether a z.default() was present but its value could not be verified stable
+   * -- a function default that returns a different value each call. The value is
+   * deliberately not recorded; the caller warns instead.
+   */
+  hasUnstableDefault: boolean;
   /**
    * Whether z.catch() was present. Only the presence is recorded, never the
    * fallback value -- see the note in `unwrapSchema` on why it is not captured.
    */
   hasCatch: boolean;
+}
+
+/**
+ * Structural equality, bigint- and Date-aware, that never throws.
+ *
+ * Used to decide whether a `.default()` is stable enough to record. It must not
+ * use `JSON.stringify` (that throws on bigint -- see #176) and must treat two
+ * fresh-but-equal objects (`() => []`, `() => ({}))`) as equal so a legitimate
+ * mutable default is recorded rather than warned.
+ */
+function structurallyEqual(a: unknown, b: unknown): boolean {
+  if (a === b) {
+    return true;
+  }
+  if (a instanceof Date && b instanceof Date) {
+    return a.getTime() === b.getTime();
+  }
+  if (typeof a !== typeof b || a === null || b === null || typeof a !== "object") {
+    return false;
+  }
+  if (Array.isArray(a) !== Array.isArray(b)) {
+    return false;
+  }
+  if (Array.isArray(a) && Array.isArray(b)) {
+    return a.length === b.length && a.every((x, i) => structurallyEqual(x, b[i]));
+  }
+  const ak = Object.keys(a as object);
+  const bk = Object.keys(b as object);
+  return (
+    ak.length === bk.length &&
+    ak.every(
+      (k) =>
+        k in (b as object) &&
+        structurallyEqual((a as Record<string, unknown>)[k], (b as Record<string, unknown>)[k]),
+    )
+  );
+}
+
+/**
+ * Reads a `.default()` value, but only returns it when it is provably stable.
+ *
+ * Zod 4 exposes `def.defaultValue` as a GETTER that invokes a function default
+ * on every access (a static `.default(v)` and `.default(() => v)` are
+ * indistinguishable at the def level -- both present as a getter, verified by
+ * probe). So the read is done twice and the value is trusted only when the two
+ * reads are structurally equal. A varying default (`() => Math.random()`,
+ * `() => crypto.randomUUID()`, a counter) differs between reads and is refused,
+ * because baking a per-call value in would make the field's descriptor -- and
+ * its version hash -- non-deterministic (#143).
+ *
+ * KNOWN RESIDUAL: a coarse time default (`() => Date.now()`, `() => new Date()`)
+ * whose two reads land in the same millisecond reads as stable and is recorded.
+ * This is no worse than the prior behavior (which always baked it); it makes
+ * only that schema's version non-deterministic run-to-run, and it is documented
+ * rather than pinned by a (flaky) test.
+ *
+ * Reading the getter invokes user code -- twice. This is precedented by the
+ * refine-message probe, and a value is only ever recorded from a verified read.
+ */
+function readStableDefault(def: {
+  defaultValue?: unknown;
+}): { ok: true; value: unknown } | { ok: false } {
+  try {
+    const first = def.defaultValue;
+    const second = def.defaultValue;
+    if (structurallyEqual(first, second)) {
+      return { ok: true, value: first };
+    }
+    return { ok: false };
+  } catch {
+    return { ok: false };
+  }
 }
 
 /** Type guard to check if schema has unwrap method */
@@ -86,6 +170,8 @@ export function unwrapSchema(schema: $ZodType): UnwrapResult {
   let isOptional = false;
   let isNullable = false;
   let hasCatch = false;
+  let hasDefault = false;
+  let hasUnstableDefault = false;
   let defaultValue: unknown;
 
   while (FLAG_WRAPPERS.has(current._zod.def.type)) {
@@ -96,9 +182,17 @@ export function unwrapSchema(schema: $ZodType): UnwrapResult {
       isNullable = true;
     } else if (wrapper === "catch") {
       hasCatch = true;
-    } else {
-      // default: capture the value before peeling the wrapper to reach the inner type
-      defaultValue = (current._zod.def as { defaultValue?: unknown }).defaultValue;
+    } else if (!hasDefault) {
+      // Default: the FIRST one reached is the OUTERMOST, which is the one Zod
+      // applies -- `z.string().default("in").default("out")` yields "out". Only
+      // this one is captured; inner defaults it shadows are skipped.
+      hasDefault = true;
+      const read = readStableDefault(current._zod.def as { defaultValue?: unknown });
+      if (read.ok) {
+        defaultValue = read.value;
+      } else {
+        hasUnstableDefault = true;
+      }
     }
 
     if (!hasUnwrap(current)) {
@@ -112,6 +206,8 @@ export function unwrapSchema(schema: $ZodType): UnwrapResult {
     isOptional,
     isNullable,
     defaultValue,
+    hasDefault,
+    hasUnstableDefault,
     hasCatch,
   };
 }
