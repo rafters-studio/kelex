@@ -27,6 +27,12 @@ export interface FieldConstraints {
   endsWith?: string;
   format?: "email" | "url" | "uuid" | "cuid" | "datetime";
 
+  // Date constraints (ISO strings, so numeric min/max stay strictly numeric)
+  /** Lower bound of a z.date(), as an ISO 8601 string. */
+  minDate?: string;
+  /** Upper bound of a z.date(), as an ISO 8601 string. */
+  maxDate?: string;
+
   // Number constraints
   min?: number;
   max?: number;
