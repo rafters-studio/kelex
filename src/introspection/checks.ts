@@ -108,6 +108,11 @@ export function extractConstraints(schema: $ZodType, unknownChecks?: string[]): 
       case "string_format":
         if (checkDef.format === "regex" && checkDef.pattern) {
           constraints.pattern = checkDef.pattern.source;
+          // Flags change what validates (/abc/i vs /abc/); dropping them silently
+          // narrowed the schema on round-trip (#179).
+          if (checkDef.pattern.flags) {
+            constraints.patternFlags = checkDef.pattern.flags;
+          }
         } else if (checkDef.format === "starts_with" && checkDef.prefix !== undefined) {
           constraints.startsWith = checkDef.prefix;
         } else if (checkDef.format === "ends_with" && checkDef.suffix !== undefined) {
