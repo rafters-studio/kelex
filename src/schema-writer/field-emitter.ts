@@ -209,7 +209,7 @@ function emitString(field: FieldDescriptor): string {
     base += `.endsWith(${JSON.stringify(constraints.endsWith)})`;
   }
   if (constraints.pattern !== undefined) {
-    base += `.regex(/${constraints.pattern}/)`;
+    base += `.regex(/${constraints.pattern}/${constraints.patternFlags ?? ""})`;
   }
 
   return base;

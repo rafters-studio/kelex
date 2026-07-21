@@ -19,6 +19,8 @@ export interface FieldConstraints {
   /** Exact length from z.string().length(n) */
   length?: number;
   pattern?: string;
+  /** Flags of a `.regex()` pattern (e.g. "i", "gm"). Absent when there are none. */
+  patternFlags?: string;
   /** Literal prefix from z.string().startsWith(p) */
   startsWith?: string;
   /** Literal suffix from z.string().endsWith(s) */
