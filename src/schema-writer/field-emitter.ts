@@ -249,8 +249,15 @@ function emitEnum(field: FieldDescriptor): string {
     );
   }
 
-  const values = field.metadata.values.map((v) => JSON.stringify(v)).join(", ");
-  return `z.enum([${values}])`;
+  const values = field.metadata.values;
+  // z.enum() takes string members. Numeric enum values are re-emitted as a
+  // union of literals that accepts the same set (a single value as one literal),
+  // since z.enum cannot carry numbers.
+  if (values.every((v) => typeof v === "string")) {
+    return `z.enum([${values.map((v) => JSON.stringify(v)).join(", ")}])`;
+  }
+  const literals = values.map((v) => `z.literal(${JSON.stringify(v)})`);
+  return literals.length === 1 ? literals[0] : `z.union([${literals.join(", ")}])`;
 }
 
 function emitArray(field: FieldDescriptor, warnings?: string[]): string {
