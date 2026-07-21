@@ -14,6 +14,10 @@ export const FLAG_WRAPPERS: ReadonlySet<string> = new Set([
   "nullable",
   "default",
   "catch",
+  // readonly is a transparent wrapper: peeled so the inner type and constraints
+  // survive (z.number().readonly() must stay a number, not degrade to string),
+  // and traversed by the meta walk like any other wrapper (#190).
+  "readonly",
 ]);
 
 export interface UnwrapResult {
@@ -188,6 +192,8 @@ export function unwrapSchema(schema: $ZodType): UnwrapResult {
       isNullable = true;
     } else if (wrapper === "catch") {
       hasCatch = true;
+    } else if (wrapper === "readonly") {
+      // Transparent: peel to the inner type, carry no flag.
     } else if (!hasDefault) {
       // Default: the FIRST one reached is the OUTERMOST, which is the one Zod
       // applies -- `z.string().default("in").default("out")` yields "out". Only
