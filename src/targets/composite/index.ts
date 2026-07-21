@@ -11,7 +11,15 @@ export const compositeTarget: CodegenTarget<CompositeOptions> = {
 
   generate(form: FormDescriptor, options: CompositeOptions): TargetResult {
     const indent = options.indent ?? 2;
-    const content = JSON.stringify(form, null, indent);
+    // JSON has no bigint, and a raw bigint anywhere in the descriptor (a literal
+    // value or a captured default) makes JSON.stringify throw (#176). Render it
+    // as its decimal string so the artifact is emitted rather than crashing; a
+    // consumer reading a bigint field sees a string, a documented JSON limit.
+    const content = JSON.stringify(
+      form,
+      (_key, value) => (typeof value === "bigint" ? value.toString() : value),
+      indent,
+    );
 
     const baseName = form.name
       .replace(/Form$/, "")
