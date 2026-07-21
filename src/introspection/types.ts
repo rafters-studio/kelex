@@ -46,7 +46,7 @@ export type FieldMetadata =
   | { kind: "number" }
   | { kind: "boolean" }
   | { kind: "date" }
-  | { kind: "enum"; values: readonly string[] }
+  | { kind: "enum"; values: readonly (string | number)[] }
   | { kind: "object"; fields: FieldDescriptor[] }
   | { kind: "array"; element: FieldDescriptor }
   | {
