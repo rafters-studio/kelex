@@ -33,7 +33,7 @@ describe("minor robustness (#192)", () => {
         .and(z.object({ k: z.boolean() })),
       OPTIONS,
     );
-    const overlaps = d.warnings.filter((w) => w.includes("declared in both members"));
+    const overlaps = d.warnings.filter((w) => w.message.includes("declared in both members"));
     expect(overlaps).toHaveLength(1);
     expect(d.warnings.length).toBe(new Set(d.warnings).size);
   });
@@ -47,6 +47,6 @@ describe("minor robustness (#192)", () => {
       }),
       OPTIONS,
     );
-    expect(d.warnings.filter((w) => w.includes("output side"))).toHaveLength(2);
+    expect(d.warnings.filter((w) => w.message.includes("output side"))).toHaveLength(2);
   });
 });

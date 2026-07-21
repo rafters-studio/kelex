@@ -48,7 +48,7 @@ describe("intersection-typed field (#169)", () => {
 
   it("no longer emits an unsupported-type warning for the intersection", () => {
     const descriptor = introspect(z.object({ address: z.intersection(base, mixin) }), OPTIONS);
-    expect(descriptor.warnings.some((w) => w.includes("unsupported type"))).toBe(false);
+    expect(descriptor.warnings.some((w) => w.message.includes("unsupported type"))).toBe(false);
   });
 
   // Criterion 2: a refine on the intersection field warns with the FIELD's path,
@@ -62,12 +62,12 @@ describe("intersection-typed field (#169)", () => {
       }),
       OPTIONS,
     );
-    const refine = descriptor.warnings.find((w) => w.includes(".refine()"));
+    const refine = descriptor.warnings.find((w) => w.message.includes(".refine()"));
     expect(refine).toBeDefined();
-    expect(refine).toContain('Field "address"');
-    expect(refine).toContain("revision must be non-negative");
+    expect(refine?.message).toContain('Field "address"');
+    expect(refine?.message).toContain("revision must be non-negative");
     // It is a field-level refine, so it must NOT read as form-level.
-    expect(refine).not.toContain("Form-level");
+    expect(refine?.message).not.toContain("Form-level");
   });
 
   it("warns about a refine on a NESTED intersection field with the field path", () => {
@@ -80,8 +80,8 @@ describe("intersection-typed field (#169)", () => {
       }),
       OPTIONS,
     );
-    const refine = descriptor.warnings.find((w) => w.includes("inner rule"));
-    expect(refine).toContain('Field "record"');
+    const refine = descriptor.warnings.find((w) => w.message.includes("inner rule"));
+    expect(refine?.message).toContain('Field "record"');
   });
 
   // Criterion 3: overlapping keys across the field's members warn, path-prefixed.
@@ -94,7 +94,8 @@ describe("intersection-typed field (#169)", () => {
     );
     expect(
       descriptor.warnings.some(
-        (w) => w.includes("declared in both members") && w.includes('"conflict.id"'),
+        (w) =>
+          w.message.includes("declared in both members") && w.message.includes('"conflict.id"'),
       ),
     ).toBe(true);
   });
@@ -136,8 +137,8 @@ describe("intersection-typed field (#169)", () => {
       }),
       OPTIONS,
     );
-    const refine = descriptor.warnings.find((w) => w.includes("deep rule"));
-    expect(refine).toContain('Field "outer.inner"');
+    const refine = descriptor.warnings.find((w) => w.message.includes("deep rule"));
+    expect(refine?.message).toContain('Field "outer.inner"');
   });
 });
 
@@ -149,9 +150,9 @@ describe("root intersection is unchanged by #169", () => {
       z.intersection(base, mixin).refine(() => true, { message: "root rule" }),
       OPTIONS,
     );
-    const refine = descriptor.warnings.find((w) => w.includes("root rule"));
-    expect(refine).toContain("Form-level");
-    expect(refine).not.toContain('Field "');
+    const refine = descriptor.warnings.find((w) => w.message.includes("root rule"));
+    expect(refine?.message).toContain("Form-level");
+    expect(refine?.message).not.toContain('Field "');
   });
 
   it("still names a root overlapping key without a path prefix", () => {
@@ -159,8 +160,8 @@ describe("root intersection is unchanged by #169", () => {
       z.intersection(z.object({ id: z.string() }), z.object({ id: z.number() })),
       OPTIONS,
     );
-    expect(descriptor.warnings.some((w) => w.includes('Intersection field "id" is declared'))).toBe(
-      true,
-    );
+    expect(
+      descriptor.warnings.some((w) => w.message.includes('Intersection field "id" is declared')),
+    ).toBe(true);
   });
 });

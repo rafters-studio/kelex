@@ -139,7 +139,7 @@ describe("integration: the ladder is a monotonic complexity gradient", () => {
 });
 
 describe("integration: rung 5 exercises the 2026-07-20 fixes end to end", () => {
-  const warningsOf = (): string[] => descriptorOf(rung5Enterprise).warnings;
+  const warningsOf = (): string[] => descriptorOf(rung5Enterprise).warnings.map((w) => w.message);
 
   it("surfaces the refine on the NESTED intersection (#153), with its message", () => {
     // The inner intersection's refine must not vanish when members merge.

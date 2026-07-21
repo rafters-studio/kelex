@@ -9,7 +9,7 @@ const OPTIONS = {
 };
 
 function warningsFor(schema: Parameters<typeof introspect>[0]): string[] {
-  return introspect(schema, OPTIONS).warnings;
+  return introspect(schema, OPTIONS).warnings.map((w) => w.message);
 }
 
 const pair = z.object({ start: z.number(), end: z.number() });

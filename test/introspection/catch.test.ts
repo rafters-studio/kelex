@@ -54,8 +54,8 @@ describe("catch handling (#154)", () => {
   it("warns that the catch fallback is not represented", () => {
     const descriptor = introspect(z.object({ score: z.number().catch(0) }), OPTIONS);
     expect(descriptor.warnings).toHaveLength(1);
-    expect(descriptor.warnings[0]).toContain("score");
-    expect(descriptor.warnings[0]).toContain(".catch()");
+    expect(descriptor.warnings[0].message).toContain("score");
+    expect(descriptor.warnings[0].message).toContain(".catch()");
   });
 
   it("does not warn when no catch is present", () => {
@@ -67,7 +67,7 @@ describe("catch handling (#154)", () => {
   // not. That warning must be gone.
   it("no longer reports catch as an unsupported type", () => {
     const descriptor = introspect(z.object({ score: z.number().catch(0) }), OPTIONS);
-    expect(descriptor.warnings.some((w) => w.includes("unsupported type"))).toBe(false);
+    expect(descriptor.warnings.some((w) => w.message.includes("unsupported type"))).toBe(false);
   });
 
   // Criterion 5: the wrapper-composition class from #149 -- catch must resolve

@@ -37,7 +37,7 @@ describe("enum accepted values (#177)", () => {
 
   it("warns that a numeric enum is re-emitted as a union", () => {
     const d = introspect(z.object({ a: z.nativeEnum({ A: 1, B: 2 }) }), OPTIONS);
-    expect(d.warnings.some((w) => w.includes("union of literals"))).toBe(true);
+    expect(d.warnings.some((w) => w.message.includes("union of literals"))).toBe(true);
   });
 
   it("does not warn for a string enum", () => {

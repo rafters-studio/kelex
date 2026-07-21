@@ -25,7 +25,7 @@ describe("z.readonly() (#190)", () => {
 
   it("does not emit an unsupported-type warning for readonly", () => {
     const d = introspect(z.object({ a: z.number().readonly() }), OPTIONS);
-    expect(d.warnings.some((w) => w.includes("unsupported type"))).toBe(false);
+    expect(d.warnings.some((w) => w.message.includes("unsupported type"))).toBe(false);
   });
 
   // Composes with the other wrappers in any order (the #149 class).
