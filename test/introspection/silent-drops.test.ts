@@ -145,7 +145,7 @@ describe("remaining silent drops (#149)", () => {
       expect(field.type).toBe("string");
       expect(field.isOptional).toBe(true);
       expect(field.constraints.minLength).toBe(3);
-      expect(descriptor.warnings).toEqual([]);
+      expect(descriptor.warnings.some((w) => w.includes(".transform()"))).toBe(true);
     });
 
     it("resolves nullable before transform", () => {
@@ -163,7 +163,7 @@ describe("remaining silent drops (#149)", () => {
       expect(field.type).toBe("string");
       expect(field.isNullable).toBe(true);
       expect(field.constraints.maxLength).toBe(9);
-      expect(descriptor.warnings).toEqual([]);
+      expect(descriptor.warnings.some((w) => w.includes(".transform()"))).toBe(true);
     });
 
     it("resolves default before transform and keeps the default value", () => {
@@ -181,7 +181,7 @@ describe("remaining silent drops (#149)", () => {
       expect(field.type).toBe("string");
       expect(field.defaultValue).toBe("ab");
       expect(field.constraints.minLength).toBe(2);
-      expect(descriptor.warnings).toEqual([]);
+      expect(descriptor.warnings.some((w) => w.includes(".transform()"))).toBe(true);
     });
 
     // Criterion 6: stacked wrappers on both sides of the pipe.

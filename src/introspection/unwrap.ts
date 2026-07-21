@@ -42,6 +42,12 @@ export interface UnwrapResult {
    * fallback value -- see the note in `unwrapSchema` on why it is not captured.
    */
   hasCatch: boolean;
+  /**
+   * Whether a pipe/transform was peeled to reach the input side. Set by
+   * `resolveInner`, never by `unwrapSchema` (which does not peel pipes). The
+   * output side of a transform is not represented, so the caller warns.
+   */
+  hasPipe: boolean;
 }
 
 /**
@@ -209,5 +215,7 @@ export function unwrapSchema(schema: $ZodType): UnwrapResult {
     hasDefault,
     hasUnstableDefault,
     hasCatch,
+    // unwrapSchema does not peel pipes; resolveInner sets this.
+    hasPipe: false,
   };
 }
