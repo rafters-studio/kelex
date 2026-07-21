@@ -57,6 +57,11 @@ export function extractConstraints(schema: $ZodType, unknownChecks?: string[]): 
       fmt === "datetime"
     ) {
       constraints.format = fmt;
+    } else {
+      // An unrecognized def-level string format (z.iso.date, z.ipv4, z.jwt,
+      // base64, nanoid, ...) carries no check and so slipped past the checks
+      // loop, degrading to an unconstrained string with no warning (#181).
+      unknownChecks?.push(`string_format:${fmt}`);
     }
   }
 
