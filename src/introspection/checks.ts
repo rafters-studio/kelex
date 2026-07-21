@@ -136,19 +136,29 @@ export function extractConstraints(schema: $ZodType, unknownChecks?: string[]): 
 
       case "greater_than":
         if (checkDef.value !== undefined) {
-          constraints.min = checkDef.value;
-          // .positive()/.gt() are exclusive; .nonnegative()/.gte()/.min() are inclusive
-          if (checkDef.inclusive === false) {
-            constraints.minExclusive = true;
+          // A z.date() bound is a Date, not a number: route it to minDate as an
+          // ISO string so constraints.min stays strictly numeric (#182).
+          if (def.type === "date" && (checkDef.value as unknown) instanceof Date) {
+            constraints.minDate = (checkDef.value as unknown as Date).toISOString();
+          } else {
+            constraints.min = checkDef.value;
+            // .positive()/.gt() are exclusive; .nonnegative()/.gte()/.min() are inclusive
+            if (checkDef.inclusive === false) {
+              constraints.minExclusive = true;
+            }
           }
         }
         break;
 
       case "less_than":
         if (checkDef.value !== undefined) {
-          constraints.max = checkDef.value;
-          if (checkDef.inclusive === false) {
-            constraints.maxExclusive = true;
+          if (def.type === "date" && (checkDef.value as unknown) instanceof Date) {
+            constraints.maxDate = (checkDef.value as unknown as Date).toISOString();
+          } else {
+            constraints.max = checkDef.value;
+            if (checkDef.inclusive === false) {
+              constraints.maxExclusive = true;
+            }
           }
         }
         break;

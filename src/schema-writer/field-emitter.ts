@@ -149,7 +149,7 @@ function emitBaseExpression(field: FieldDescriptor, warnings?: string[]): string
     case "boolean":
       return "z.boolean()";
     case "date":
-      return "z.date()";
+      return emitDate(field);
     case "enum":
       return emitEnum(field);
     case "array":
@@ -165,6 +165,18 @@ function emitBaseExpression(field: FieldDescriptor, warnings?: string[]): string
     default:
       throw new Error(`Unexpected field type: ${field.type}`);
   }
+}
+
+function emitDate(field: FieldDescriptor): string {
+  const { constraints } = field;
+  let base = "z.date()";
+  if (constraints.minDate !== undefined) {
+    base += `.min(new Date(${JSON.stringify(constraints.minDate)}))`;
+  }
+  if (constraints.maxDate !== undefined) {
+    base += `.max(new Date(${JSON.stringify(constraints.maxDate)}))`;
+  }
+  return base;
 }
 
 function emitString(field: FieldDescriptor): string {
