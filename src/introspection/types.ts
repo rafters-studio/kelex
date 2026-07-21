@@ -106,6 +106,10 @@ export interface FieldDescriptor {
   /**
    * Default value from z.default(). Captured before the default wrapper is
    * peeled during unwrapping. `undefined` when the field has no default.
+   *
+   * KNOWN LIMITATION (#192/L1): a genuine `.default(undefined)` is indistinguishable
+   * from no default -- both leave this key absent. This is the degenerate case;
+   * `.default(undefined)` has no practical effect.
    */
   defaultValue?: unknown;
 
