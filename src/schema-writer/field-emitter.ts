@@ -121,8 +121,13 @@ function isJsonSafe(value: unknown): boolean {
   }
 
   const type = typeof value;
-  if (type === "string" || type === "number" || type === "boolean") {
-    return Number.isNaN(value) ? false : true;
+  if (type === "number") {
+    // Reject NaN and +/-Infinity: JSON.stringify renders them as `null`, so a
+    // `.default(Infinity)` would silently re-emit as `.default(null)` (#192/L3).
+    return Number.isFinite(value);
+  }
+  if (type === "string" || type === "boolean") {
+    return true;
   }
 
   if (Array.isArray(value)) {
