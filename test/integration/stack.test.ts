@@ -37,7 +37,8 @@ const RUNGS: Rung[] = [
   { name: "2 · constraints", schema: rung2Account, fieldCount: 9, expectedWarnings: 0 },
   { name: "3 · nesting + meta", schema: rung3Profile, fieldCount: 6, expectedWarnings: 0 },
   { name: "4 · composites", schema: rung4Order, fieldCount: 7, expectedWarnings: 0 },
-  { name: "5 · very complex", schema: rung5Enterprise, fieldCount: 11, expectedWarnings: 6 },
+  // 6 warnings from #152-era fixes + 1 for the slug transform's dropped output side (#180).
+  { name: "5 · very complex", schema: rung5Enterprise, fieldCount: 11, expectedWarnings: 7 },
 ];
 
 function descriptorOf(schema: unknown): FormDescriptor {
