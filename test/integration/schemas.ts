@@ -75,10 +75,10 @@ export const rung4Order = z.object({
 
 /**
  * Rung 5 -- very complex, and the session regression guard. Its TOP LEVEL is a
- * nested intersection, because that is the only place kelex processes an
- * intersection's `.refine()` (they are flattened at the root; an
- * intersection-typed *field* degrades to a string, which is a separate
- * limitation). Every construct fixed on 2026-07-20 appears here:
+ * nested intersection, which exercises intersection flattening and refine
+ * scanning at the root. (Intersection-typed fields flatten too, as of #169;
+ * this rung keeps its refines at the root, where #153 first fixed them.)
+ * Every construct fixed on 2026-07-20 appears here:
  *
  * - a `.refine()` on a NESTED intersection (#153) -- the inner refine
  * - a root `.refine()` carrying a message (#156) -- the outer refine
