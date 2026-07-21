@@ -27,6 +27,12 @@ interface ZodCheck {
 const KNOWN_FORMATS = new Set(["email", "url", "uuid", "cuid", "datetime"] as const);
 
 /**
+ * Def-level number formats that imply an integer. `z.int()` is "safeint"; the
+ * sized integer helpers carry their own format. Any of these sets `isInt`.
+ */
+const INTEGER_NUMBER_FORMATS = new Set(["safeint", "int32", "uint32"]);
+
+/**
  * Extracts validation constraints from a Zod schema's checks array
  * and top-level def properties (format for z.email()/z.url()/z.uuid()).
  * Must be called on unwrapped schema (not optional/nullable wrapper).
@@ -52,6 +58,14 @@ export function extractConstraints(schema: $ZodType, unknownChecks?: string[]): 
     ) {
       constraints.format = fmt;
     }
+  }
+
+  // z.int() carries its int-ness as a def-level number format ("safeint"),
+  // where z.number().int() carries it as a number_format check. Without this,
+  // the idiomatic z.int() lost its int-ness and hashed differently from the
+  // equivalent z.number().int() (#178).
+  if (def.type === "number" && def.format && INTEGER_NUMBER_FORMATS.has(def.format)) {
+    constraints.isInt = true;
   }
 
   const checks = def.checks;
