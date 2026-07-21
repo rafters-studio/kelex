@@ -9,5 +9,7 @@ export type {
   FieldType,
   FormDescriptor,
   FormStep,
+  Warning,
+  WarningCode,
 } from "./types";
 export { type UnwrapResult, unwrapSchema } from "./unwrap";

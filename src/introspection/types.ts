@@ -48,6 +48,39 @@ export interface FieldConstraints {
   maxItems?: number;
 }
 
+/**
+ * Stable machine code for a warning. Consumers switch on this rather than
+ * parsing prose; the `message` is for human display only.
+ */
+export type WarningCode =
+  | "unsupported-type"
+  | "refine-unrepresented"
+  | "catch-fallback-dropped"
+  | "default-unstable"
+  | "transform-output-dropped"
+  | "coerce-unrepresented"
+  | "key-policy-unrepresented"
+  | "format-unrecognized"
+  | "check-dropped"
+  | "record-key-narrowed"
+  | "intersection-key-overlap"
+  | "numeric-enum-as-union"
+  | "discriminator-unresolved"
+  | "target-warning";
+
+/**
+ * A structured introspection warning. `path` follows Standard Schema's
+ * `PathSegment[]` convention (string object keys, numeric indices; empty for a
+ * form-level warning), so it can be matched against a `~standard` issue path.
+ * `code` is stable machine-readable; `message` is human-readable prose that
+ * embeds the same location for CLI display.
+ */
+export interface Warning {
+  path: (string | number)[];
+  code: WarningCode;
+  message: string;
+}
+
 /** Type-specific metadata */
 export type FieldMetadata =
   | { kind: "string" }
@@ -160,8 +193,12 @@ export interface FormDescriptor {
   /** Exported schema name */
   schemaExportName: string;
 
-  /** Warnings from introspection (e.g., skipped features) */
-  warnings: string[];
+  /**
+   * Structured warnings from introspection. Each carries a `path`, a stable
+   * `code`, and a human `message` -- consumers switch on `code` and locate by
+   * `path` rather than parsing prose (#184).
+   */
+  warnings: Warning[];
 
   /** Steps for multi-step (wizard) form generation. When undefined, a single-step form is generated. */
   steps?: FormStep[];

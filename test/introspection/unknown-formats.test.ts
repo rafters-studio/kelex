@@ -3,7 +3,8 @@ import { z } from "zod/v4";
 import { introspect } from "../../src/introspection";
 
 const OPTIONS = { formName: "F", schemaImportPath: "./f", schemaExportName: "s" };
-const warningsOf = (s: Parameters<typeof introspect>[0]) => introspect(s, OPTIONS).warnings;
+const warningsOf = (s: Parameters<typeof introspect>[0]) =>
+  introspect(s, OPTIONS).warnings.map((w) => w.message);
 
 describe("unknown string formats (#181)", () => {
   // H3: an unrecognized def-level format degraded to string with no warning.

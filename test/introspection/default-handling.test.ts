@@ -10,7 +10,7 @@ function field(schema: Parameters<typeof introspect>[0]): FieldDescriptor {
 }
 
 function warnings(schema: Parameters<typeof introspect>[0]): string[] {
-  return introspect(schema, OPTIONS).warnings;
+  return introspect(schema, OPTIONS).warnings.map((w) => w.message);
 }
 
 describe("default handling (#175)", () => {
@@ -42,14 +42,14 @@ describe("default handling (#175)", () => {
     const d = introspect(z.object({ a: z.number().default(() => Math.random()) }), OPTIONS);
     expect(d.fields[0].defaultValue).toBeUndefined();
     expect("defaultValue" in d.fields[0]).toBe(false);
-    expect(d.warnings.some((w) => w.includes("different value each call"))).toBe(true);
+    expect(d.warnings.some((w) => w.message.includes("different value each call"))).toBe(true);
   });
 
   it("refuses a counter-style function default", () => {
     let n = 0;
     const d = introspect(z.object({ a: z.number().default(() => n++) }), OPTIONS);
     expect(d.fields[0].defaultValue).toBeUndefined();
-    expect(d.warnings.some((w) => w.includes("different value each call"))).toBe(true);
+    expect(d.warnings.some((w) => w.message.includes("different value each call"))).toBe(true);
   });
 
   // The warning is path-qualified for a nested default.
@@ -58,7 +58,7 @@ describe("default handling (#175)", () => {
       z.object({ outer: z.object({ token: z.string().default(() => `${Math.random()}`) }) }),
       OPTIONS,
     );
-    expect(d.warnings.some((w) => w.includes('Field "outer.token"'))).toBe(true);
+    expect(d.warnings.some((w) => w.message.includes('Field "outer.token"'))).toBe(true);
   });
 
   // H1: default-of-default. Zod applies the OUTERMOST; the reader must record it.
@@ -83,7 +83,7 @@ describe("default handling (#175)", () => {
       OPTIONS,
     );
     expect(d.fields[0].defaultValue).toBeUndefined();
-    expect(d.warnings.some((w) => w.includes("different value each call"))).toBe(true);
+    expect(d.warnings.some((w) => w.message.includes("different value each call"))).toBe(true);
   });
 
   // A field with no default carries no defaultValue key at all.

@@ -1,5 +1,6 @@
 import type { $ZodType } from "zod/v4/core";
 import { introspect } from "../introspection";
+import type { Warning } from "../introspection/types";
 import type { CodegenTarget, TargetOptions, TargetOutputFile } from "../targets/types";
 
 export interface GenerateOptions {
@@ -29,8 +30,12 @@ export interface GenerateResult {
   /** List of fields that were processed */
   fields: string[];
 
-  /** Any warnings (e.g., unsupported features skipped) */
-  warnings: string[];
+  /**
+   * Structured warnings, combining introspection warnings (which carry a real
+   * `path` and `code`) with the target's own warnings (wrapped with a
+   * `target-warning` code and an empty path, since a target reports prose).
+   */
+  warnings: Warning[];
 }
 
 /**
@@ -50,6 +55,13 @@ export function generate(options: GenerateOptions): GenerateResult {
   return {
     files: targetResult.files,
     fields: targetResult.fields,
-    warnings: [...formDescriptor.warnings, ...targetResult.warnings],
+    warnings: [
+      ...formDescriptor.warnings,
+      // A target reports prose; wrap it as a structured warning so the combined
+      // list is uniform. Targets do not track a field path.
+      ...targetResult.warnings.map(
+        (message): Warning => ({ path: [], code: "target-warning", message }),
+      ),
+    ],
   };
 }

@@ -25,8 +25,8 @@ describe("compositeTarget", () => {
     });
 
     expect(result.warnings.length).toBeGreaterThan(0);
-    expect(result.warnings.join("; ")).toContain("lookup");
-    expect(result.warnings.join("; ")).toContain("unsupported");
+    expect(result.warnings.map((w) => w.message).join("; ")).toContain("lookup");
+    expect(result.warnings.map((w) => w.message).join("; ")).toContain("unsupported");
   });
 
   it("outputs valid JSON", () => {

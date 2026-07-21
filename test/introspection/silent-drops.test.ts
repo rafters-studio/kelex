@@ -26,7 +26,7 @@ describe("remaining silent drops (#149)", () => {
         z.intersection(left, right).refine((v) => v.x.length > 0, { message: "nonempty" }),
         OPTIONS,
       );
-      expect(descriptor.warnings.some((w) => w.includes(".refine()"))).toBe(true);
+      expect(descriptor.warnings.some((w) => w.message.includes(".refine()"))).toBe(true);
     });
 
     // Criterion 2: a refine on a MEMBER. Only the member's shape survives the
@@ -39,7 +39,7 @@ describe("remaining silent drops (#149)", () => {
         ),
         OPTIONS,
       );
-      expect(descriptor.warnings.some((w) => w.includes(".refine()"))).toBe(true);
+      expect(descriptor.warnings.some((w) => w.message.includes(".refine()"))).toBe(true);
     });
 
     // Criterion 3: the merge itself still works -- warning must not cost fields.
@@ -69,7 +69,7 @@ describe("remaining silent drops (#149)", () => {
         ),
         OPTIONS,
       );
-      expect(descriptor.warnings.some((w) => w.includes(".refine()"))).toBe(true);
+      expect(descriptor.warnings.some((w) => w.message.includes(".refine()"))).toBe(true);
       expect(descriptor.fields.map((f) => f.name)).toEqual(["x", "y", "z"]);
     });
 
@@ -90,7 +90,7 @@ describe("remaining silent drops (#149)", () => {
           .refine(() => true, { message: "depth 1" }),
         OPTIONS,
       );
-      const refineWarnings = descriptor.warnings.filter((w) => w.includes(".refine()"));
+      const refineWarnings = descriptor.warnings.filter((w) => w.message.includes(".refine()"));
       expect(refineWarnings).toHaveLength(3);
     });
 
@@ -101,7 +101,7 @@ describe("remaining silent drops (#149)", () => {
         z.intersection(left, right).refine(() => true, { message: "root rule" }),
         OPTIONS,
       );
-      expect(descriptor.warnings.filter((w) => w.includes(".refine()"))).toHaveLength(1);
+      expect(descriptor.warnings.filter((w) => w.message.includes(".refine()"))).toHaveLength(1);
     });
 
     it("does not double-warn a refine on an object member", () => {
@@ -112,7 +112,7 @@ describe("remaining silent drops (#149)", () => {
         ),
         OPTIONS,
       );
-      expect(descriptor.warnings.filter((w) => w.includes(".refine()"))).toHaveLength(1);
+      expect(descriptor.warnings.filter((w) => w.message.includes(".refine()"))).toHaveLength(1);
     });
 
     // A non-intersection root still warns, since resolveRootSchema now owns
@@ -122,7 +122,7 @@ describe("remaining silent drops (#149)", () => {
         z.object({ a: z.string(), b: z.string() }).refine(() => true, { message: "obj rule" }),
         OPTIONS,
       );
-      expect(descriptor.warnings.filter((w) => w.includes(".refine()"))).toHaveLength(1);
+      expect(descriptor.warnings.filter((w) => w.message.includes(".refine()"))).toHaveLength(1);
     });
   });
 
@@ -145,7 +145,7 @@ describe("remaining silent drops (#149)", () => {
       expect(field.type).toBe("string");
       expect(field.isOptional).toBe(true);
       expect(field.constraints.minLength).toBe(3);
-      expect(descriptor.warnings.some((w) => w.includes(".transform()"))).toBe(true);
+      expect(descriptor.warnings.some((w) => w.message.includes(".transform()"))).toBe(true);
     });
 
     it("resolves nullable before transform", () => {
@@ -163,7 +163,7 @@ describe("remaining silent drops (#149)", () => {
       expect(field.type).toBe("string");
       expect(field.isNullable).toBe(true);
       expect(field.constraints.maxLength).toBe(9);
-      expect(descriptor.warnings.some((w) => w.includes(".transform()"))).toBe(true);
+      expect(descriptor.warnings.some((w) => w.message.includes(".transform()"))).toBe(true);
     });
 
     it("resolves default before transform and keeps the default value", () => {
@@ -181,7 +181,7 @@ describe("remaining silent drops (#149)", () => {
       expect(field.type).toBe("string");
       expect(field.defaultValue).toBe("ab");
       expect(field.constraints.minLength).toBe(2);
-      expect(descriptor.warnings.some((w) => w.includes(".transform()"))).toBe(true);
+      expect(descriptor.warnings.some((w) => w.message.includes(".transform()"))).toBe(true);
     });
 
     // Criterion 6: stacked wrappers on both sides of the pipe.

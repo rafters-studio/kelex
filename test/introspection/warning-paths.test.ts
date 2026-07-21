@@ -9,7 +9,7 @@ const OPTIONS = {
 };
 
 function warningsFor(schema: Parameters<typeof introspect>[0]): string[] {
-  return introspect(schema, OPTIONS).warnings;
+  return introspect(schema, OPTIONS).warnings.map((w) => w.message);
 }
 
 /** An unrepresentable type, so every case below has something to warn about. */

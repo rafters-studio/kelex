@@ -11,6 +11,8 @@ export type {
   FormStep,
   IntrospectOptions,
   UnwrapResult,
+  Warning,
+  WarningCode,
 } from "./introspection";
 
 export { extractConstraints, introspect, unwrapSchema } from "./introspection";

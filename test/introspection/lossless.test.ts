@@ -54,7 +54,7 @@ describe("lossless reader (#141)", () => {
   it("emits a warning naming the field for a dropped .refine()", () => {
     const descriptor = introspect(architectureSchema, OPTIONS);
     expect(descriptor.warnings.length).toBeGreaterThan(0);
-    expect(descriptor.warnings.some((w) => w.includes("score"))).toBe(true);
+    expect(descriptor.warnings.some((w) => w.message.includes("score"))).toBe(true);
   });
 
   // Criterion 6: z.string().startsWith()/.endsWith() are captured, not dropped.
@@ -104,13 +104,13 @@ describe("lossless reader (#141)", () => {
     );
     // Text updated in #158: the warning now names the record's path, since
     // "Record key schema..." with no location was unusable on a nested record.
-    expect(record.warnings.some((w) => w.includes("record key schema"))).toBe(true);
-    expect(record.warnings.some((w) => w.includes('Field "dict"'))).toBe(true);
+    expect(record.warnings.some((w) => w.message.includes("record key schema"))).toBe(true);
+    expect(record.warnings.some((w) => w.message.includes('Field "dict"'))).toBe(true);
 
     const intersection = introspect(
       z.intersection(z.object({ a: z.string() }), z.object({ a: z.number() })),
       OPTIONS,
     );
-    expect(intersection.warnings.some((w) => w.includes("Intersection field"))).toBe(true);
+    expect(intersection.warnings.some((w) => w.message.includes("Intersection field"))).toBe(true);
   });
 });

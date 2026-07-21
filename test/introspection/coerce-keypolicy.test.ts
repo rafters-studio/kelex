@@ -3,7 +3,8 @@ import { z } from "zod/v4";
 import { introspect } from "../../src/introspection";
 
 const OPTIONS = { formName: "F", schemaImportPath: "./f", schemaExportName: "s" };
-const warningsOf = (s: Parameters<typeof introspect>[0]) => introspect(s, OPTIONS).warnings;
+const warningsOf = (s: Parameters<typeof introspect>[0]) =>
+  introspect(s, OPTIONS).warnings.map((w) => w.message);
 
 describe("coerce and unknown-key policy (#183)", () => {
   // M1: coercion changes what inputs are accepted; it was dropped silently.

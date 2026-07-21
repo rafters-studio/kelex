@@ -3,7 +3,8 @@ import { z } from "zod/v4";
 import { introspect } from "../../src/introspection";
 
 const OPTIONS = { formName: "F", schemaImportPath: "./f", schemaExportName: "s" };
-const warningsOf = (s: Parameters<typeof introspect>[0]) => introspect(s, OPTIONS).warnings;
+const warningsOf = (s: Parameters<typeof introspect>[0]) =>
+  introspect(s, OPTIONS).warnings.map((w) => w.message);
 
 describe("transform/pipe output warning (#180)", () => {
   // B1: a .transform() dropped its output side with no warning.
