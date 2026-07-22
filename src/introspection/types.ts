@@ -170,8 +170,25 @@ export interface FormStep {
   fields: string[];
 }
 
+/**
+ * The descriptor FORMAT version -- the shape of `FormDescriptor` itself, bumped
+ * by hand when the descriptor structure changes (a new metadata kind, a new
+ * constraint field). Distinct from `version`, which hashes one schema's content.
+ *
+ * A consumer that does not recognize the `formatVersion` it reads should FAIL
+ * CLOSED (refuse to consume) rather than guess at an unknown shape (#185).
+ */
+export const FORMAT_VERSION = 1;
+
 /** Complete form descriptor */
 export interface FormDescriptor {
+  /**
+   * The descriptor FORMAT version (see `FORMAT_VERSION`) -- the shape of this
+   * object, not the content of one schema. Excluded from the content `version`
+   * hash. A consumer reading an unrecognized value should fail closed.
+   */
+  formatVersion: number;
+
   /**
    * Deterministic content hash of the fields -- the descriptor's data contract.
    * Identical schemas hash identically and any contract change produces a new

@@ -1,6 +1,7 @@
 export { extractConstraints } from "./checks";
 export { type IntrospectOptions, introspect } from "./introspect";
 export { collectMeta } from "./meta";
+export { FORMAT_VERSION } from "./types";
 export { computeVersion, withVersion } from "./version";
 export type {
   FieldConstraints,

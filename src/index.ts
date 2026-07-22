@@ -15,7 +15,7 @@ export type {
   WarningCode,
 } from "./introspection";
 
-export { extractConstraints, introspect, unwrapSchema } from "./introspection";
+export { extractConstraints, FORMAT_VERSION, introspect, unwrapSchema } from "./introspection";
 
 // The mapping module (resolveField, findMatchingRule, defaultMappingRules,
 // ComponentConfig, ComponentType, MappingRule) is deliberately NOT exported.
