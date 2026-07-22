@@ -4,6 +4,28 @@ import type { CompositeOptions } from "./types";
 
 export type { CompositeOptions };
 
+/** Fallback base name when a form name sanitizes to nothing (#191). */
+const DEFAULT_BASE_NAME = "form";
+
+/**
+ * Derives a filesystem-safe base name from the form name: strips the `Form`
+ * suffix, kebab-cases, then removes the hazards a library consumer -- which,
+ * unlike the CLI, has no path-traversal guard -- could otherwise be handed from
+ * an attacker- or user-controlled name (#191). Path separators become dashes so
+ * the artifact cannot escape its directory, leading dots are dropped so it is
+ * never a hidden dotfile, and an empty result falls back to `DEFAULT_BASE_NAME`.
+ * A normal PascalCase name (e.g. `UserProfileForm`) is unaffected.
+ */
+function toBaseName(formName: string): string {
+  const safe = formName
+    .replace(/Form$/, "")
+    .replace(/([a-z])([A-Z])/g, "$1-$2")
+    .toLowerCase()
+    .replace(/[/\\]+/g, "-")
+    .replace(/^\.+/, "");
+  return safe.length > 0 ? safe : DEFAULT_BASE_NAME;
+}
+
 export const compositeTarget: CodegenTarget<CompositeOptions> = {
   name: "composite",
   description: "JSON serialization of FormDescriptor",
@@ -21,10 +43,7 @@ export const compositeTarget: CodegenTarget<CompositeOptions> = {
       indent,
     );
 
-    const baseName = form.name
-      .replace(/Form$/, "")
-      .replace(/([a-z])([A-Z])/g, "$1-$2")
-      .toLowerCase();
+    const baseName = toBaseName(form.name);
 
     return {
       files: [
