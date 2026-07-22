@@ -67,6 +67,9 @@ export type WarningCode =
   | "intersection-key-overlap"
   | "numeric-enum-as-union"
   | "discriminator-unresolved"
+  // A plain union had more than one field that could serve as a discriminator,
+  // so none was promoted (#212) -- the ambiguity must be resolved upstream.
+  | "discriminator-ambiguous"
   | "target-warning"
   // Emitted only at the generate() seam (never by introspect() into a
   // FormDescriptor): a target did not report processing a descriptor field, so
