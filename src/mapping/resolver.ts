@@ -39,7 +39,7 @@ export function resolveField(
 
   if (field.type === "union" && field.metadata.kind === "union") {
     const variantConfigs: {
-      value: string;
+      value: string | number | boolean;
       fields: FieldDescriptor[];
       configs: Map<string, ComponentConfig>;
     }[] = [];

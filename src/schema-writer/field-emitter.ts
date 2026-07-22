@@ -380,12 +380,13 @@ function emitUnion(field: FieldDescriptor, warnings?: string[]): string {
 
 function emitDiscriminatedUnion(
   discriminator: string,
-  variants: { value: string; fields: FieldDescriptor[] }[],
+  variants: { value: string | number | boolean; fields: FieldDescriptor[] }[],
   warnings?: string[],
 ): string {
   const variantExprs = variants.map((variant) => {
     const entries = variant.fields.map((child) => {
-      // The discriminator field introspects as a plain string; reconstruct as z.literal(value).
+      // Reconstruct the discriminator as z.literal(value) with its real type --
+      // JSON.stringify(true) is `true`, JSON.stringify(1) is `1` (#187).
       if (child.name === discriminator) {
         return `${child.name}: z.literal(${JSON.stringify(variant.value)})`;
       }
@@ -398,7 +399,7 @@ function emitDiscriminatedUnion(
 }
 
 function emitPlainUnion(
-  variants: { value: string; fields: FieldDescriptor[] }[],
+  variants: { value: string | number | boolean; fields: FieldDescriptor[] }[],
   warnings?: string[],
 ): string {
   const optionExprs = variants.map((variant) => {
@@ -407,6 +408,7 @@ function emitPlainUnion(
     // buildUnionMetadata). Real object variants preserve their original field
     // names, so this pattern only matches synthetics.
     const isSyntheticScalar =
+      typeof variant.value === "string" &&
       variant.value.startsWith("variant_") &&
       variant.fields.length === 1 &&
       variant.fields[0].name.startsWith("option_");
