@@ -67,7 +67,11 @@ export type WarningCode =
   | "intersection-key-overlap"
   | "numeric-enum-as-union"
   | "discriminator-unresolved"
-  | "target-warning";
+  | "target-warning"
+  // Emitted only at the generate() seam (never by introspect() into a
+  // FormDescriptor): a target did not report processing a descriptor field, so
+  // its output may be missing it (#189).
+  | "target-field-unprocessed";
 
 /**
  * A structured introspection warning. `path` follows Standard Schema's
