@@ -113,8 +113,18 @@ export type FieldMetadata =
        * marker to unwrap it back to the bare scalar, instead of guessing from
        * the field name -- a guess that misfires on a real object whose only
        * field is literally named `option_0` (#188).
+       *
+       * `meta` is the variant member's own `.meta()` payload (verbatim, like
+       * `FieldDescriptor.meta`), so a consumer can label the variant chooser
+       * (#213). Absent when the member carries no meta. It is presentation, not
+       * contract, so it is excluded from the content `version` hash.
        */
-      variants: { value: string | number | boolean; fields: FieldDescriptor[]; synthetic?: true }[];
+      variants: {
+        value: string | number | boolean;
+        fields: FieldDescriptor[];
+        synthetic?: true;
+        meta?: Record<string, unknown>;
+      }[];
     }
   | { kind: "tuple"; elements: FieldDescriptor[] }
   | { kind: "record"; valueDescriptor: FieldDescriptor }
