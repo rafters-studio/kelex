@@ -814,6 +814,7 @@ describe("emitField", () => {
           variants: [
             {
               value: "variant_0",
+              synthetic: true,
               fields: [
                 makeField({
                   name: "option_0",
@@ -824,6 +825,7 @@ describe("emitField", () => {
             },
             {
               value: "variant_1",
+              synthetic: true,
               fields: [
                 makeField({
                   name: "option_1",

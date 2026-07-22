@@ -96,10 +96,18 @@ export type FieldMetadata =
       discriminator?: string;
       /**
        * `value` is the variant's discriminator value with its real type
-       * (`"card"`, `true`, `1`), not a stringified one (#187). Synthetic
-       * variants (scalar members / undiscriminated) use a `"variant_N"` string.
+       * (`"card"`, `true`, `1`), not a stringified one (#187). Undiscriminated
+       * variants carry a `"variant_N"` placeholder string.
+       *
+       * `synthetic` is `true` only for a wrapped scalar member: the reader wraps
+       * a non-object union option (the `z.number()` in
+       * `z.union([z.object({...}), z.number()])`) in a single-field object so
+       * every variant has a uniform shape. Consumers and the writer read this
+       * marker to unwrap it back to the bare scalar, instead of guessing from
+       * the field name -- a guess that misfires on a real object whose only
+       * field is literally named `option_0` (#188).
        */
-      variants: { value: string | number | boolean; fields: FieldDescriptor[] }[];
+      variants: { value: string | number | boolean; fields: FieldDescriptor[]; synthetic?: true }[];
     }
   | { kind: "tuple"; elements: FieldDescriptor[] }
   | { kind: "record"; valueDescriptor: FieldDescriptor }

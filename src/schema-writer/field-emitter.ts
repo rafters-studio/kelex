@@ -399,21 +399,16 @@ function emitDiscriminatedUnion(
 }
 
 function emitPlainUnion(
-  variants: { value: string | number | boolean; fields: FieldDescriptor[] }[],
+  variants: { value: string | number | boolean; fields: FieldDescriptor[]; synthetic?: true }[],
   warnings?: string[],
 ): string {
   const optionExprs = variants.map((variant) => {
-    // Heuristic: the introspector wraps non-object union members in synthetic
-    // single-field objects named "variant_N" / "option_N" (see introspect.ts
-    // buildUnionMetadata). Real object variants preserve their original field
-    // names, so this pattern only matches synthetics.
-    const isSyntheticScalar =
-      typeof variant.value === "string" &&
-      variant.value.startsWith("variant_") &&
-      variant.fields.length === 1 &&
-      variant.fields[0].name.startsWith("option_");
-
-    if (isSyntheticScalar) {
+    // A synthetic variant is the reader's single-field wrapper around a
+    // non-object union member (introspect.ts buildUnionMetadata, #188); unwrap
+    // it back to the bare scalar. A real object variant carries no marker --
+    // including one whose only field is named "option_0" -- and is emitted as
+    // an object, not silently deleted the way the old name heuristic did.
+    if (variant.synthetic) {
       return emitField(variant.fields[0], warnings);
     }
 
