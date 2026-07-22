@@ -10,7 +10,8 @@ export type FieldType =
   | "array"
   | "union"
   | "tuple"
-  | "record";
+  | "record"
+  | "ref";
 
 /** Validation constraints extracted from Zod checks */
 export interface FieldConstraints {
@@ -128,7 +129,12 @@ export type FieldMetadata =
     }
   | { kind: "tuple"; elements: FieldDescriptor[] }
   | { kind: "record"; valueDescriptor: FieldDescriptor }
-  | { kind: "literal"; values: readonly unknown[] };
+  | { kind: "literal"; values: readonly unknown[] }
+  // A recursive reference (from `z.lazy`): `target` is the path of the ancestor
+  // node this cycle points back to, so a consumer can render a self-referential
+  // widget instead of expanding forever. The reader emits this at the closing
+  // edge of a cycle rather than looping (#214).
+  | { kind: "ref"; target: (string | number)[] };
 
 /** Single field descriptor */
 export interface FieldDescriptor {
@@ -209,7 +215,7 @@ export interface FormStep {
  * A consumer that does not recognize the `formatVersion` it reads should FAIL
  * CLOSED (refuse to consume) rather than guess at an unknown shape (#185).
  */
-export const FORMAT_VERSION = 1;
+export const FORMAT_VERSION = 2;
 
 /** Complete form descriptor */
 export interface FormDescriptor {

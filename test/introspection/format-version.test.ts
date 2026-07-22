@@ -33,6 +33,7 @@ describe("descriptor format version (#185)", () => {
   });
 
   it("exports FORMAT_VERSION for a consumer to pin against", () => {
-    expect(FORMAT_VERSION).toBe(1);
+    // Bumped to 2 when the `ref` metadata kind was added (#214).
+    expect(FORMAT_VERSION).toBe(2);
   });
 });

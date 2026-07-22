@@ -34,6 +34,15 @@ export function emitField(field: FieldDescriptor, warnings?: string[]): string {
       );
     }
     expr = field.schemaRef;
+  } else if (field.type === "ref") {
+    // A recursive reference (a z.lazy cycle) cannot be reconstructed as a flat
+    // expression: the descriptor marks the cycle but does not carry the schema
+    // to rebuild it. Emit z.unknown() and warn rather than throw (#214).
+    warnings?.push(
+      `Field "${field.name}": a recursive reference (z.lazy) is not re-emittable from the ` +
+        "descriptor; emitted z.unknown() -- reconstruct the recursive schema by hand.",
+    );
+    expr = "z.unknown()";
   } else {
     if (!SUPPORTED_TYPES.has(field.type)) {
       throw new Error(
