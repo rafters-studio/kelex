@@ -10,10 +10,11 @@ import type { FieldDescriptor, FormDescriptor } from "./types";
  * redundant -- absent an explicit title it is derived from `name`, which is
  * hashed.
  *
- * They are stripped ONLY from an object recognized as a FieldDescriptor (see
- * `looksLikeFieldDescriptor`), never recursively from a user value payload such
- * as a `defaultValue` or a literal value -- a default `{ label: "x" }` is data,
- * and stripping its `label` there made three different defaults collide (#176).
+ * They are stripped ONLY from an object recognized as a FieldDescriptor or a
+ * union variant (see `looksLikeFieldDescriptor`/`looksLikeUnionVariant`), never
+ * recursively from a user value payload such as a `defaultValue` or a literal
+ * value -- a default `{ label: "x" }` is data, and stripping its `label` there
+ * made three different defaults collide (#176).
  */
 const PRESENTATION_KEYS = new Set(["label", "description", "meta", "schemaRef"]);
 
@@ -29,6 +30,17 @@ function looksLikeFieldDescriptor(o: Record<string, unknown>): boolean {
     typeof o.isOptional === "boolean" &&
     typeof o.isNullable === "boolean"
   );
+}
+
+/**
+ * Whether an object is a union variant (`{ value, fields }`). A variant's `meta`
+ * is a presentation label (#213), so it must be stripped from the hash exactly
+ * like a field's -- but a variant is not a FieldDescriptor, so it needs its own
+ * marker. `fields` being an array plus a `value` key is specific enough that a
+ * user value payload is not mistaken for one.
+ */
+function looksLikeUnionVariant(o: Record<string, unknown>): boolean {
+  return "value" in o && Array.isArray(o.fields);
 }
 
 /**
@@ -55,7 +67,7 @@ function canonicalize(value: unknown): unknown {
 
   if (value !== null && typeof value === "object") {
     const source = value as Record<string, unknown>;
-    const strip = looksLikeFieldDescriptor(source);
+    const strip = looksLikeFieldDescriptor(source) || looksLikeUnionVariant(source);
     const result: Record<string, unknown> = {};
     for (const key of Object.keys(source).sort()) {
       if ((strip && PRESENTATION_KEYS.has(key)) || source[key] === undefined) {
