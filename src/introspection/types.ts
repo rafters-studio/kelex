@@ -94,7 +94,12 @@ export type FieldMetadata =
   | {
       kind: "union";
       discriminator?: string;
-      variants: { value: string; fields: FieldDescriptor[] }[];
+      /**
+       * `value` is the variant's discriminator value with its real type
+       * (`"card"`, `true`, `1`), not a stringified one (#187). Synthetic
+       * variants (scalar members / undiscriminated) use a `"variant_N"` string.
+       */
+      variants: { value: string | number | boolean; fields: FieldDescriptor[] }[];
     }
   | { kind: "tuple"; elements: FieldDescriptor[] }
   | { kind: "record"; valueDescriptor: FieldDescriptor }
