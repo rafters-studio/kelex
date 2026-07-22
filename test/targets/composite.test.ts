@@ -103,6 +103,47 @@ describe("compositeTarget", () => {
     expect(result.files[0].filename).toBe("user-profile.composite.json");
   });
 
+  describe("filename edge cases (#191)", () => {
+    const filenameFor = (formName: string): string => {
+      const form = introspect(z.object({ name: z.string() }), {
+        formName,
+        schemaImportPath: "./schema",
+        schemaExportName: "schema",
+      });
+      return compositeTarget.generate(form, {}).files[0].filename;
+    };
+
+    // AC1: "Form" strips to "" -> would be ".composite.json", a hidden dotfile.
+    it("produces a non-dotfile filename when the name is just 'Form'", () => {
+      expect(filenameFor("Form")).toBe("form.composite.json");
+    });
+
+    // AC2: path separators and leading dots.
+    it("replaces path separators with a safe character", () => {
+      expect(filenameFor("a/b")).toBe("a-b.composite.json");
+      expect(filenameFor("a\\b")).toBe("a-b.composite.json");
+    });
+
+    it("strips a leading dot so the artifact is never hidden", () => {
+      expect(filenameFor(".hidden")).toBe("hidden.composite.json");
+    });
+
+    it("does not let a traversal-shaped name emit path separators", () => {
+      expect(filenameFor("../../etc/passwd")).not.toContain("/");
+      expect(filenameFor("..\\..\\secret")).not.toContain("\\");
+    });
+
+    // AC3: empty derived base name falls back to the documented default.
+    it("falls back to a default when the derived base name is empty", () => {
+      expect(filenameFor("...")).toBe("form.composite.json");
+    });
+
+    // AC4: a normal PascalCase name is unchanged.
+    it("leaves a normal PascalCase name unchanged", () => {
+      expect(filenameFor("UserProfileForm")).toBe("user-profile.composite.json");
+    });
+  });
+
   it("reports all fields", () => {
     const schema = z.object({ name: z.string(), age: z.number() });
     const form = introspect(schema, {
