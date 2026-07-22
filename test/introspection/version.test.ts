@@ -39,8 +39,14 @@ describe("descriptor content version (#143)", () => {
   // If a change moves it, that is a breaking change for every consumer pinned
   // against a descriptor version, and it needs a deliberate decision rather
   // than an updated expectation.
+  //
+  // Deliberately re-pinned in #186: literals became a first-class `type:
+  // "literal"` (they were mislabeled `string` before), and the fixture's
+  // discriminated union carries literal `kind` fields, so their representation
+  // -- and thus the fixture's content hash -- legitimately changed. This is the
+  // intended breaking change, not a hash-function regression.
   it("produces the exact hash published for the canonical fixture", () => {
-    expect(versionOf(architectureObject)).toBe("11617b63d9d43a33");
+    expect(versionOf(architectureObject)).toBe("8a8a5f6b1b0ba18c");
   });
 
   // Criterion 2: cosmetic options must not churn the version, or every consumer

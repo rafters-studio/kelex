@@ -8,6 +8,7 @@ const SUPPORTED_TYPES = new Set([
   "boolean",
   "date",
   "enum",
+  "literal",
   "array",
   "tuple",
   "object",
@@ -153,6 +154,8 @@ function emitBaseExpression(field: FieldDescriptor, warnings?: string[]): string
       return emitNumber(field);
     case "boolean":
       return "z.boolean()";
+    case "literal":
+      return emitLiteralField(field);
     case "date":
       return emitDate(field);
     case "enum":
@@ -170,6 +173,20 @@ function emitBaseExpression(field: FieldDescriptor, warnings?: string[]): string
     default:
       throw new Error(`Unexpected field type: ${field.type}`);
   }
+}
+
+function emitLiteralField(field: FieldDescriptor): string {
+  if (field.metadata.kind !== "literal") {
+    throw new Error(
+      `Field "${field.name}" has type "literal" but metadata kind is "${field.metadata.kind}"`,
+    );
+  }
+  const emit = (v: unknown): string => (typeof v === "bigint" ? `${v}n` : JSON.stringify(v));
+  const { values } = field.metadata;
+  // A single value emits z.literal(v); multiple emit z.literal([...]).
+  return values.length === 1
+    ? `z.literal(${emit(values[0])})`
+    : `z.literal([${values.map(emit).join(", ")}])`;
 }
 
 function emitDate(field: FieldDescriptor): string {

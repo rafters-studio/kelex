@@ -5,6 +5,7 @@ export type FieldType =
   | "boolean"
   | "date"
   | "enum"
+  | "literal"
   | "object"
   | "array"
   | "union"
@@ -97,7 +98,7 @@ export type FieldMetadata =
     }
   | { kind: "tuple"; elements: FieldDescriptor[] }
   | { kind: "record"; valueDescriptor: FieldDescriptor }
-  | { kind: "literal"; value: unknown };
+  | { kind: "literal"; values: readonly unknown[] };
 
 /** Single field descriptor */
 export interface FieldDescriptor {

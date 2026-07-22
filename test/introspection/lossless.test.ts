@@ -67,8 +67,8 @@ describe("lossless reader (#141)", () => {
     expect(descriptor.fields[0].constraints.endsWith).toBe("Z");
   });
 
-  // Criterion 7a: literal fields carry a legal { kind: "literal"; value } metadata
-  // variant instead of an out-of-union unchecked cast.
+  // Criterion 7a: literal fields carry a legal { kind: "literal"; values } metadata
+  // variant (a first-class literal type as of #186).
   it("carries literal values as a legal literal metadata variant", () => {
     const fields = fixtureFields();
     const payment = fields.payment.metadata;
@@ -76,7 +76,8 @@ describe("lossless reader (#141)", () => {
       throw new Error("expected discriminated union metadata");
     }
     const cardKind = payment.variants[0].fields.find((f) => f.name === "kind");
-    expect(cardKind?.metadata).toEqual({ kind: "literal", value: "card" });
+    expect(cardKind?.type).toBe("literal");
+    expect(cardKind?.metadata).toEqual({ kind: "literal", values: ["card"] });
   });
 
   // Criterion 7b: pipe/transform peels to ONE inner schema so pre-pipe
