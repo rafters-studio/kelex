@@ -124,9 +124,27 @@ export const RUNTIME = `(function () {
       Object.keys(node).forEach(function (k) { compact(node[k]); });
     }
   }
+  // Collect TYPED values (not FormData's raw strings) so the POSTed JSON matches
+  // the schema: number/range -> number, checkbox -> boolean. Otherwise a
+  // z.number()/z.boolean() field fails the server's ~standard on every submit.
+  // A blank non-checkbox is omitted (an optional field stays undefined); a date
+  // stays a string (JSON has no Date -- the server needs z.coerce.date).
   function collect() {
     var out = {};
-    new FormData(form).forEach(function (value, name) {
+    form.querySelectorAll("[name]").forEach(function (el) {
+      if (el.disabled) return;
+      var name = el.getAttribute("name");
+      var type = (el.getAttribute("type") || el.tagName).toLowerCase();
+      var value;
+      if (type === "checkbox") {
+        value = el.checked;
+      } else if (type === "radio") {
+        if (!el.checked) return;
+        value = el.value;
+      } else {
+        if (el.value === "") return;
+        value = type === "number" || type === "range" ? Number(el.value) : el.value;
+      }
       assign(out, name.split("."), value);
     });
     compact(out);
