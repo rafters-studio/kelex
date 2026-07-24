@@ -161,7 +161,7 @@ describe("postHandler -- async POST, native client validation, routing (#227)", 
     const radius = form.querySelector('[name="shape.radius"]') as HTMLInputElement;
     const w = form.querySelector('[name="shape.w"]') as HTMLInputElement;
     expect(radius.disabled).toBe(false);
-    expect(w.disabled).toBe(true); // inactive panel -> disabled -> excluded from FormData
+    expect(w.disabled).toBe(true); // inactive panel -> disabled -> skipped by collect()
 
     radius.value = "5";
     const fetchMock = stubFetch();
@@ -169,6 +169,18 @@ describe("postHandler -- async POST, native client validation, routing (#227)", 
     await flush();
     const body = JSON.parse((fetchMock.mock.calls[0] as [string, RequestInit])[1].body as string);
     expect(body.shape).not.toHaveProperty("w"); // the disabled panel did not submit
+  });
+
+  it("collects only the checked option of a radio group (few-value enum)", async () => {
+    const form = mount({ role: z.enum(["admin", "user"]) });
+    expect(form.querySelectorAll('[name="role"][type="radio"]').length).toBe(2);
+    const [, second] = form.querySelectorAll('[name="role"]') as NodeListOf<HTMLInputElement>;
+    second.checked = true; // choose "user"
+    const fetchMock = stubFetch();
+    submit(form);
+    await flush();
+    const body = JSON.parse((fetchMock.mock.calls[0] as [string, RequestInit])[1].body as string);
+    expect(body).toEqual({ role: "user" }); // only the checked radio, once
   });
 
   it("sends an unbound issue to the form-level sink, never dropping it", async () => {
