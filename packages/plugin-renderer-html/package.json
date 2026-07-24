@@ -1,0 +1,50 @@
+{
+  "name": "@kelex/plugin-renderer-html",
+  "version": "0.1.2",
+  "description": "Default base-HTML renderer plugin for kelex — classless, zero-dependency.",
+  "keywords": [
+    "form",
+    "html",
+    "kelex",
+    "kelex-plugin"
+  ],
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/rafters-studio/kelex.git",
+    "directory": "packages/plugin-renderer-html"
+  },
+  "files": [
+    "dist",
+    "inventory.jsonl",
+    "form.css"
+  ],
+  "type": "module",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    },
+    "./form.css": "./form.css"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "scripts": {
+    "build": "tsdown",
+    "dev": "tsdown --watch",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "test:unit": "vitest run",
+    "test:all": "vitest run",
+    "prepublishOnly": "pnpm build"
+  },
+  "devDependencies": {
+    "kelex": "workspace:*",
+    "zod": "^4.4.3"
+  },
+  "peerDependencies": {
+    "kelex": "workspace:^",
+    "zod": "^4.0.0"
+  }
+}

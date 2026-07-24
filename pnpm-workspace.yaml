@@ -1,3 +1,5 @@
-allowBuilds:
-  lefthook: true
-  rolldown: false
+packages:
+  - "packages/*"
+
+onlyBuiltDependencies:
+  - lefthook

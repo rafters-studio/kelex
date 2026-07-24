@@ -1,0 +1,17 @@
+{
+  // The plugins to import and load. Install them alongside kelex.
+  "renderer": "@kelex/plugin-renderer-html",
+  "handler": "@kelex/plugin-handler-post",
+
+  // The schema module (imported and evaluated) and its exported schema.
+  "schema": "./schema.ts",
+  "export": "signupSchema",
+
+  // Where to write the generated form.
+  "out": "signup.html",
+
+  // Options forwarded to the renderer plugin's factory.
+  "renderer.options": {
+    "action": "/api/signup",
+  },
+}

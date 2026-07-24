@@ -1,0 +1,18 @@
+{
+  "name": "@kelex/integration",
+  "version": "0.1.2",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "test:unit": "vitest run --exclude '**/*.spec.ts'",
+    "test:all": "vitest run"
+  },
+  "devDependencies": {
+    "@kelex/plugin-handler-post": "workspace:*",
+    "@kelex/plugin-renderer-html": "workspace:*",
+    "kelex": "workspace:*",
+    "zod": "^4.4.3"
+  }
+}
