@@ -60,6 +60,7 @@
   "devDependencies": {
     "@changesets/cli": "^2.29.8",
     "@types/node": "^25.0.9",
+    "happy-dom": "^20.11.1",
     "lefthook": "^2.0.15",
     "oxfmt": "^0.59.0",
     "oxlint": "^1.74.0",

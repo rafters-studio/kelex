@@ -55,6 +55,11 @@ export type {
 export { createHtmlRenderer, htmlRenderer, pathToId } from "./renderers/html";
 export type { HtmlRendererOptions } from "./renderers/html";
 
+// The default async-POST handler: framework-free wiring shipped in-package. A
+// true plugin -- imports only the public contract, no inventory (uniform over
+// paths). Native HTML5 client validation; full ~standard on the server at POST.
+export { createPostHandler, postHandler } from "./handlers/post";
+
 // The conformance harness: prove a plugin honors the contract. A testing tool
 // (it takes a `names` reader for the opaque `T`), not part of the runtime
 // contract -- exported so plugin authors and kelex's own defaults can run it.
