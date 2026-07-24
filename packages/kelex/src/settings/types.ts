@@ -1,23 +1,16 @@
 /**
- * The `kelex.settings.jsonc` shape — the host config. It declares which plugins
- * to load and how kelex runs a form, like any plugin system's config file.
+ * `kelex.settings.jsonc` — the host config. It declares ONLY which plugins to
+ * import and load; everything else (the schema, output, per-run options) is
+ * runtime. Like any plugin system, the config is "what plugins", not "what work".
  */
 export interface KelexSettings {
   /** Renderer plugin package to import + load, e.g. "@kelex/plugin-renderer-html". */
   renderer: string;
-  /** Handler plugin package to import + load. Omit for inert (unwired) markup. */
-  handler?: string;
-  /** Path to the schema module (imported and evaluated at run time). */
-  schema: string;
-  /** The exported schema name in that module. */
-  export: string;
-  /** Where to write the generated form. */
-  out: string;
-  /** Form name (metadata). Defaults to the export name. */
-  formName?: string;
-  /** Options forwarded to the renderer plugin's factory. */
+  /** Handler plugin package to import + load, e.g. "@kelex/plugin-handler-post". */
+  handler: string;
+  /** Default options for the renderer plugin (a run can override them). */
   "renderer.options"?: Record<string, unknown>;
-  /** Options forwarded to the handler plugin's factory. */
+  /** Default options for the handler plugin (a run can override them). */
   "handler.options"?: Record<string, unknown>;
 }
 
@@ -27,3 +20,22 @@ export interface KelexSettings {
  * named in the settings and calls this.
  */
 export type PluginFactory<T> = (options?: Record<string, unknown>) => T;
+
+/** Per-run options passed to `generateForm` at call time — not baked in settings. */
+export interface GenerateOptions {
+  /**
+   * Settings file to load. Defaults to `kelex.settings.jsonc` in the cwd —
+   * `generateForm` loads it itself, so you never have to.
+   */
+  config?: string;
+  /** Pass settings directly instead of loading a file (skips `config`). */
+  settings?: KelexSettings;
+  /** Form name (metadata). */
+  formName?: string;
+  /** Options merged over the settings' `renderer.options` for this run. */
+  rendererOptions?: Record<string, unknown>;
+  /** Options merged over the settings' `handler.options` for this run. */
+  handlerOptions?: Record<string, unknown>;
+  /** Directory to resolve the plugin packages from (default: `process.cwd()`). */
+  from?: string;
+}

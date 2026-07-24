@@ -46,31 +46,39 @@ Install the host, the plugins you want, and Zod:
 pnpm add kelex @kelex/plugin-renderer-html @kelex/plugin-handler-post zod
 ```
 
-Declare them in `kelex.settings.jsonc`:
+Declare **which plugins** to load in `kelex.settings.jsonc` — that's all the
+config holds; the schema and output are run-time inputs:
 
 ```jsonc
 {
   "renderer": "@kelex/plugin-renderer-html",
   "handler": "@kelex/plugin-handler-post",
-  "schema": "./src/schema.ts",
-  "export": "signupSchema",
-  "out": "signup.html",
-  "renderer.options": { "action": "/api/signup" },
 }
 ```
 
-Run it:
+Run it — the schema is the argument, output and options are flags:
 
 ```sh
-kelex form
+kelex form ./src/schema.ts -e signupSchema -o signup.html -a /api/signup
 # ✓ Generated signup.html
 #   renderer: @kelex/plugin-renderer-html + @kelex/plugin-handler-post
 #   4 fields: email, displayName, plan, acceptTerms
 ```
 
-Flags override the settings (`-c -s -e -o -r -H -a`), or drive it from code with
-`loadSettings` / `generateForm` from `kelex`. See
-[Getting started](./docs/getting-started.md).
+Or drive it from code — pass a live schema; kelex loads the settings and plugins
+itself:
+
+```typescript
+import { z } from "zod/v4";
+import { generateForm, writeForm } from "kelex";
+
+const { output } = await generateForm(z.object({ email: z.email() }), {
+  rendererOptions: { action: "/api/signup" },
+});
+writeForm("signup.html", output);
+```
+
+See [Getting started](./docs/getting-started.md).
 
 With the default plugins that emits a complete, accessible, classless `<form>`:
 constraints become native validation attributes, every control carries its path

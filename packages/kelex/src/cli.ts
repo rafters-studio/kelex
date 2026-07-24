@@ -19,8 +19,7 @@ interface GenerateCommandOptions {
 
 interface FormCommandOptions {
   config: string;
-  schema?: string;
-  export?: string;
+  export: string;
   out?: string;
   renderer?: string;
   handler?: string;
@@ -35,18 +34,17 @@ const program = new Command();
 program.name("kelex").description("Zod schema in, form out — a plugin host").version(version);
 
 program
-  .command("form", { isDefault: true })
-  .description("Generate a form from kelex.settings.jsonc and the plugins it declares")
-  .option("-c, --config <path>", "Settings file", "kelex.settings.jsonc")
-  .option("-s, --schema <path>", "Schema module (overrides settings)")
-  .option("-e, --export <name>", "Exported schema name (overrides settings)")
-  .option("-o, --out <path>", "Output path (overrides settings)")
+  .command("form <schema-path>", { isDefault: true })
+  .description("Generate a form: kelex.settings.jsonc names the plugins; the schema is a run input")
+  .option("-c, --config <path>", "Settings file (plugins to load)", "kelex.settings.jsonc")
+  .option("-e, --export <name>", "Exported schema name", "schema")
+  .option("-o, --out <path>", "Output path (default derived from the schema path)")
   .option("-r, --renderer <pkg>", "Renderer plugin package (overrides settings)")
   .option("-H, --handler <pkg>", "Handler plugin package (overrides settings)")
-  .option("-a, --action <url>", "Form POST action (overrides renderer.options.action)")
-  .action(async (options: FormCommandOptions) => {
+  .option("-a, --action <url>", "Form POST action (forwarded to the renderer)")
+  .action(async (schemaPath: string, options: FormCommandOptions) => {
     try {
-      await runForm(options);
+      await runForm(schemaPath, options);
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
       console.error(`Error: ${message}`);
@@ -87,24 +85,36 @@ program
 
 program.parse();
 
-/** Load settings, apply flag overrides, generate the form, and write it. */
-async function runForm(options: FormCommandOptions): Promise<void> {
+/**
+ * The settings name the plugins; the schema, output, and options are run inputs.
+ * Import the schema module, then fold the form with the loaded plugins.
+ */
+async function runForm(schemaPath: string, options: FormCommandOptions): Promise<void> {
   const settings: KelexSettings = loadSettings(options.config);
-  if (options.schema) settings.schema = options.schema;
-  if (options.export) settings.export = options.export;
-  if (options.out) settings.out = options.out;
   if (options.renderer) settings.renderer = options.renderer;
   if (options.handler) settings.handler = options.handler;
-  if (options.action) {
-    settings["renderer.options"] = { ...settings["renderer.options"], action: options.action };
+
+  const absoluteSchemaPath = path.resolve(schemaPath);
+  if (!fs.existsSync(absoluteSchemaPath)) {
+    throw new Error(`Schema file not found: ${absoluteSchemaPath}`);
+  }
+  const schemaModule = await import(pathToFileURL(absoluteSchemaPath).href);
+  const schema = schemaModule[options.export] ?? schemaModule.default;
+  if (!schema?._zod) {
+    throw new Error(`Export "${options.export}" is not a Zod schema in ${schemaPath} (zod >= 4)`);
   }
 
-  const { output, fields } = await generateForm(settings);
-  writeForm(settings.out, output);
-  console.log(`✓ Generated ${path.resolve(settings.out)}`);
-  console.log(
-    `  renderer: ${settings.renderer}${settings.handler ? ` + ${settings.handler}` : ""}`,
-  );
+  const { output, fields } = await generateForm(schema, {
+    settings,
+    formName: deriveFormName(options.export),
+    rendererOptions: options.action ? { action: options.action } : undefined,
+    from: process.cwd(),
+  });
+
+  const outPath = options.out ?? deriveOutputPath(schemaPath, ".html");
+  writeForm(outPath, output);
+  console.log(`✓ Generated ${path.resolve(outPath)}`);
+  console.log(`  renderer: ${settings.renderer} + ${settings.handler}`);
   console.log(`  ${fields.length} fields: ${fields.join(", ")}`);
 }
 

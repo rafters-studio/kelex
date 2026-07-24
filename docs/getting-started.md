@@ -27,56 +27,53 @@ and how to run:
 
 ```jsonc
 {
-  // The plugins to import and load (must be installed).
+  // The ONLY required settings: which plugins to import and load.
   "renderer": "@kelex/plugin-renderer-html",
   "handler": "@kelex/plugin-handler-post",
 
-  // The schema module (imported and evaluated) and its exported schema.
-  "schema": "./src/schema.ts",
-  "export": "signupSchema",
-
-  // Where to write the generated form.
-  "out": "signup.html",
-
-  // Options forwarded to the renderer plugin.
-  "renderer.options": { "action": "/api/signup" },
+  // Optional: default options for the plugins (a run can override them).
+  "renderer.options": { "action": "/api/submit" },
 }
 ```
 
-`handler` is optional — omit it for inert markup (no behavior). `.jsonc` allows
-comments and trailing commas.
+That's all the settings hold — _which plugins_. Everything else (the schema, the
+output path, per-run options) is a **run-time** input, not baked into the config.
+`.jsonc` allows comments and trailing commas.
 
 ## Generate
 
-From the CLI:
+From the CLI — the schema is the argument, output and options are flags:
 
 ```sh
-kelex form
+kelex form ./src/schema.ts -e signupSchema -o signup.html -a /api/signup
 # ✓ Generated signup.html
 #   renderer: @kelex/plugin-renderer-html + @kelex/plugin-handler-post
 #   4 fields: email, displayName, plan, acceptTerms
-```
-
-Flags override the settings file — handy in scripts or CI:
-
-```sh
-kelex form -s ./other.ts -e otherSchema -o other.html -a /api/other
-#   -c/--config  -s/--schema  -e/--export  -o/--out
-#   -r/--renderer  -H/--handler  -a/--action
-```
-
-Or from code:
-
-```typescript
-import { loadSettings, generateForm, writeForm } from "kelex";
-
-const settings = loadSettings("kelex.settings.jsonc");
-const { output, fields } = await generateForm(settings);
-writeForm(settings.out, output);
+#
+#   -c/--config  -e/--export  -o/--out  -a/--action
+#   -r/--renderer  -H/--handler   (override the settings' plugins)
 ```
 
 kelex imports and **evaluates** the schema module to read the live Zod graph
-(not source text), so only point `schema` at a path you trust.
+(not source text), so only point it at a path you trust.
+
+Or from code — pass the **live schema**; kelex loads `kelex.settings.jsonc` and
+the plugins itself:
+
+```typescript
+import { z } from "zod/v4";
+import { generateForm, writeForm } from "kelex";
+
+const schema = z.object({ email: z.email(), name: z.string().min(2) });
+
+const { output } = await generateForm(schema, {
+  rendererOptions: { action: "/api/signup" }, // a run-time option
+});
+writeForm("signup.html", output);
+```
+
+Pass `{ config: "path.jsonc" }` for a different settings file, or `{ settings }`
+to skip the file entirely.
 
 ## What you get
 

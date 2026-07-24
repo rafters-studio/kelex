@@ -6,10 +6,10 @@ import { type ParseError, parse as parseJsonc } from "jsonc-parser";
 import { renderForm } from "../engine";
 import type { Handler, Renderer } from "../engine/types";
 import { introspect } from "../introspection";
-import type { KelexSettings, PluginFactory } from "./types";
+import type { GenerateOptions, KelexSettings, PluginFactory } from "./types";
 
-/** Read and validate `kelex.settings.jsonc` (comments + trailing commas allowed). */
-export function loadSettings(configPath: string): KelexSettings {
+/** Read and validate `kelex.settings.jsonc` — ONLY the plugins to load. */
+export function loadSettings(configPath = "kelex.settings.jsonc"): KelexSettings {
   const raw = readFileSync(resolve(configPath), "utf8");
   const errors: ParseError[] = [];
   const parsed = parseJsonc(raw, errors, {
@@ -22,27 +22,22 @@ export function loadSettings(configPath: string): KelexSettings {
   if (!parsed || typeof parsed !== "object") {
     throw new Error(`invalid ${configPath}: expected a settings object`);
   }
-  if (!parsed.renderer) throw new Error(`${configPath}: "renderer" (a plugin package) is required`);
-  if (!parsed.schema || !parsed.export) {
-    throw new Error(`${configPath}: "schema" and "export" are required`);
+  if (!parsed.renderer || !parsed.handler) {
+    throw new Error(`${configPath}: "renderer" and "handler" (plugin packages) are required`);
   }
-  if (!parsed.out) throw new Error(`${configPath}: "out" (output path) is required`);
   return parsed;
 }
 
 /**
- * The plugin load contract: import the named package and call its default-exported
- * factory with the plugin's options. A plugin that does not default-export a
- * factory is a hard error — the host cannot use it.
+ * The plugin load contract: resolve the named package from the PROJECT (where the
+ * consumer installed it — the host depends on no particular plugin), import it,
+ * and call its default-exported factory with the merged options.
  */
 async function loadPlugin<T>(
   pkg: string,
   options: Record<string, unknown> | undefined,
   from: string,
 ): Promise<T> {
-  // Resolve the plugin from the PROJECT (where the consumer installed it),
-  // not from kelex's own node_modules -- the host doesn't depend on any
-  // particular plugin, it loads whatever the settings name.
   const require = createRequire(pathToFileURL(resolve(from, "package.json")).href);
   let resolved: string;
   try {
@@ -66,45 +61,45 @@ export interface FormResult {
   fields: string[];
 }
 
+const merge = (
+  base: Record<string, unknown> | undefined,
+  over: Record<string, unknown> | undefined,
+): Record<string, unknown> | undefined => (base || over ? { ...base, ...over } : undefined);
+
 /**
- * Run the pipeline described by the settings: import the schema, introspect it,
- * load the declared renderer (and handler) plugins, and fold the form. This is
- * the host — kelex loads whatever plugins the settings name, exactly like any
- * plugin system reads its config and loads the plugins declared there.
+ * Run the pipeline: load the settings (from `kelex.settings.jsonc` unless you
+ * override), introspect the LIVE schema, load the renderer + handler plugins the
+ * settings name, and fold the form. You pass the schema and any per-run options;
+ * kelex loads the settings and the plugins itself, like any plugin system.
  */
 export async function generateForm(
-  settings: KelexSettings,
-  from: string = process.cwd(),
+  schema: Parameters<typeof introspect>[0],
+  options: GenerateOptions = {},
 ): Promise<FormResult> {
-  const schemaUrl = pathToFileURL(resolve(settings.schema)).href;
-  const mod = (await import(schemaUrl)) as Record<string, unknown> & { default?: unknown };
-  const schema = mod[settings.export] ?? mod.default;
-  if (!schema || !(schema as { _zod?: unknown })._zod) {
-    throw new Error(
-      `"${settings.export}" is not a Zod schema in ${settings.schema} (need zod >= 4)`,
-    );
-  }
-
-  const descriptor = introspect(schema as Parameters<typeof introspect>[0], {
-    formName: settings.formName ?? settings.export,
-    schemaImportPath: settings.schema,
-    schemaExportName: settings.export,
+  const settings = options.settings ?? loadSettings(options.config);
+  const from = options.from ?? process.cwd();
+  const descriptor = introspect(schema, {
+    formName: options.formName ?? "Form",
+    schemaImportPath: "./schema",
+    schemaExportName: "schema",
   });
 
   const renderer = await loadPlugin<Renderer<unknown>>(
     settings.renderer,
-    settings["renderer.options"],
+    merge(settings["renderer.options"], options.rendererOptions),
     from,
   );
-  const handler = settings.handler
-    ? await loadPlugin<Handler<unknown>>(settings.handler, settings["handler.options"], from)
-    : undefined;
+  const handler = await loadPlugin<Handler<unknown>>(
+    settings.handler,
+    merge(settings["handler.options"], options.handlerOptions),
+    from,
+  );
 
   const output = renderForm(descriptor, renderer, handler);
   return { output: String(output), fields: descriptor.fields.map((f) => f.name) };
 }
 
-/** Write a generated form to the settings' `out` path, creating parent dirs. */
+/** Write a generated form to `outPath`, creating parent dirs. */
 export function writeForm(outPath: string, output: string): void {
   const target = resolve(outPath);
   mkdirSync(dirname(target), { recursive: true });

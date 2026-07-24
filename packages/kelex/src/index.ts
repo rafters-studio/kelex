@@ -4,4 +4,4 @@
 // their own entry points (`kelex/engine`, `kelex/introspection`, ...).
 export { generateForm, loadSettings, writeForm } from "./settings";
 export type { FormResult } from "./settings";
-export type { KelexSettings, PluginFactory } from "./settings/types";
+export type { GenerateOptions, KelexSettings, PluginFactory } from "./settings/types";
