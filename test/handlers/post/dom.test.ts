@@ -60,18 +60,21 @@ describe("postHandler -- async POST, native client validation, routing (#227)", 
     expect(wired).toContain("addEventListener");
   });
 
-  it("collects values by name and POSTs JSON to the form action", async () => {
-    const form = mount({ name: z.string(), age: z.number() });
+  it("collects TYPED values by name and POSTs JSON to the form action", async () => {
+    const form = mount({ name: z.string(), age: z.number(), agree: z.boolean() });
     const fetchMock = stubFetch();
     (form.querySelector('[name="name"]') as HTMLInputElement).value = "Ada";
     (form.querySelector('[name="age"]') as HTMLInputElement).value = "42";
+    (form.querySelector('[name="agree"]') as HTMLInputElement).checked = true;
     submit(form);
     await flush();
     expect(fetchMock).toHaveBeenCalledOnce();
     const [url, init] = fetchMock.mock.calls[0] as [string, RequestInit];
     expect(url).toBe("/submit");
     expect(init.method).toBe("POST");
-    expect(JSON.parse(init.body as string)).toEqual({ name: "Ada", age: "42" });
+    // number stays a number, checkbox a boolean -- so the server's zod schema
+    // (z.number()/z.boolean(), no coercion) validates on the first try.
+    expect(JSON.parse(init.body as string)).toEqual({ name: "Ada", age: 42, agree: true });
   });
 
   it("gates the client with native validation -- an invalid required field blocks the POST", async () => {
@@ -158,7 +161,7 @@ describe("postHandler -- async POST, native client validation, routing (#227)", 
     const radius = form.querySelector('[name="shape.radius"]') as HTMLInputElement;
     const w = form.querySelector('[name="shape.w"]') as HTMLInputElement;
     expect(radius.disabled).toBe(false);
-    expect(w.disabled).toBe(true); // inactive panel -> disabled -> excluded from FormData
+    expect(w.disabled).toBe(true); // inactive panel -> disabled -> skipped by collect()
 
     radius.value = "5";
     const fetchMock = stubFetch();
@@ -166,6 +169,18 @@ describe("postHandler -- async POST, native client validation, routing (#227)", 
     await flush();
     const body = JSON.parse((fetchMock.mock.calls[0] as [string, RequestInit])[1].body as string);
     expect(body.shape).not.toHaveProperty("w"); // the disabled panel did not submit
+  });
+
+  it("collects only the checked option of a radio group (few-value enum)", async () => {
+    const form = mount({ role: z.enum(["admin", "user"]) });
+    expect(form.querySelectorAll('[name="role"][type="radio"]').length).toBe(2);
+    const [, second] = form.querySelectorAll('[name="role"]') as NodeListOf<HTMLInputElement>;
+    second.checked = true; // choose "user"
+    const fetchMock = stubFetch();
+    submit(form);
+    await flush();
+    const body = JSON.parse((fetchMock.mock.calls[0] as [string, RequestInit])[1].body as string);
+    expect(body).toEqual({ role: "user" }); // only the checked radio, once
   });
 
   it("sends an unbound issue to the form-level sink, never dropping it", async () => {
