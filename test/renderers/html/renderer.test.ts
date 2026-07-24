@@ -81,6 +81,33 @@ describe("htmlRenderer -- default base-HTML leaf controls (#226)", () => {
     expect(one(z.literal("x"))).toContain('type="hidden"');
   });
 
+  it("does not mark a plain boolean checkbox required (false is valid)", () => {
+    expect(one(z.boolean())).not.toContain("required");
+  });
+
+  it("emits a bare YYYY-MM-DD for a bounded date's min/max (not an ISO timestamp)", () => {
+    const html = one(z.date().min(new Date("2020-01-01")).max(new Date("2021-06-15")));
+    expect(html).toContain('min="2020-01-01"');
+    expect(html).toContain('max="2021-06-15"');
+    expect(html).not.toMatch(/min="[^"]*T/); // no time portion
+  });
+
+  it("emits a single valid value for a multi-value literal, not the joined array", () => {
+    const html = one(z.literal(["draft", "published", "archived"]));
+    expect(html).toContain('value="draft"');
+    expect(html).not.toContain("draft,published");
+  });
+
+  it("gives a radio group's option ids no collision with a sibling field's id", () => {
+    // `fx` option 0 and the `fx_0` control both used to resolve to id="fx__0".
+    const html = render(
+      introspect(asSchema(z.object({ fx: z.enum(["a", "b"]), fx_0: z.string() })), OPTS),
+      htmlRenderer,
+    );
+    const ids = [...html.matchAll(/\sid="([^"]+)"/g)].map((m) => m[1]);
+    expect(new Set(ids).size).toBe(ids.length); // all ids unique
+  });
+
   it("is classless -- no `class` attribute anywhere in the output", () => {
     const html = render(
       introspect(

@@ -35,7 +35,11 @@ const input: Composer<string> = (i) => {
     // A hidden input carries no label or error slot, so it drops the aria pair
     // (which would dangle at a slot that is never rendered) -- keeping only the
     // join hooks (name/id/data-path).
-    const value = i.config.value;
+    // `$values` resolves to the literal's value array; a hidden input carries one
+    // value, so take the first (a multi-value literal's canonical member) rather
+    // than stringifying the whole array into a value the schema would reject.
+    const raw = i.config.value;
+    const value = Array.isArray(raw) ? raw[0] : raw;
     return `<input${attrs({
       type,
       name: i.key,
@@ -60,9 +64,14 @@ const textarea: Composer<string> = (i) => {
   return fieldFrame(i.key, i.field.label, control);
 };
 
-/** A boolean -> a single checkbox. `required` means it must be checked. */
+/**
+ * A boolean -> a single checkbox. It is NOT marked `required`: native `required`
+ * on a checkbox means "must be checked", but a non-optional boolean accepts
+ * `false` just as validly as `true` -- only a missing value is invalid, which a
+ * checkbox cannot express. (A future `z.literal(true)` mapping could opt in.)
+ */
 const checkbox: Composer<string> = (i) => {
-  const control = `<input${attrs({ type: "checkbox", ...hookAttrs(i.key), required: !i.field.isOptional || undefined })}>`;
+  const control = `<input${attrs({ type: "checkbox", ...hookAttrs(i.key) })}>`;
   return fieldFrame(i.key, i.field.label, control);
 };
 
@@ -74,7 +83,10 @@ const enumControl: Composer<string> = (i) => {
   if (values.length > 0 && values.length <= RADIO_MAX) {
     const options = values
       .map((v, n) => {
-        const optId = `${id}__${n}`;
+        // `pathToId` never emits `-` (a hyphen escapes to `_h`), so a `-opt-`
+        // delimiter cannot collide with any control's own id -- unlike `__${n}`,
+        // which clashed with a sibling whose path `_` escaped to `__`.
+        const optId = `${id}-opt-${n}`;
         return `<label for="${optId}"><input${attrs({ type: "radio", id: optId, name: i.key, value: String(v), required: required && n === 0 ? true : undefined })}>${escapeHtml(String(v))}</label>`;
       })
       .join("");

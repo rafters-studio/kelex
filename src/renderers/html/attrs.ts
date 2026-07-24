@@ -61,8 +61,11 @@ export function validationAttrs(
     out.step = c.step ?? (c.isInt ? 1 : undefined);
   }
   if (field.type === "date") {
-    out.min = c.minDate;
-    out.max = c.maxDate;
+    // `<input type="date">` min/max require a bare `YYYY-MM-DD`; the constraint
+    // is an ISO datetime, so a full timestamp is treated as absent (the bound
+    // silently lost). Slice to the date portion.
+    out.min = c.minDate?.slice(0, 10);
+    out.max = c.maxDate?.slice(0, 10);
   }
   return out;
 }

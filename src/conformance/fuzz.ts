@@ -29,6 +29,8 @@ const LEAVES: { type: FieldType; make: () => $ZodType }[] = [
   { type: "number", make: () => z.number() as unknown as $ZodType },
   { type: "boolean", make: () => z.boolean() as unknown as $ZodType },
   { type: "enum", make: () => z.enum(["a", "b", "c"]) as unknown as $ZodType },
+  { type: "date", make: () => z.date() as unknown as $ZodType },
+  { type: "literal", make: () => z.literal("x") as unknown as $ZodType },
 ];
 
 const pick = <A>(rng: () => number, xs: A[]): A => xs[Math.floor(rng() * xs.length)];
@@ -72,6 +74,8 @@ const ALL: FieldType[] = [
   "number",
   "boolean",
   "enum",
+  "date",
+  "literal",
   "object",
   "array",
   "record",
