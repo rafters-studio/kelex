@@ -1,6 +1,6 @@
 {
   "name": "@rafters/kelex",
-  "version": "0.1.2",
+  "version": "1.0.0",
   "description": "Generate forms from Zod schemas with pluggable targets",
   "keywords": [
     "codegen",
