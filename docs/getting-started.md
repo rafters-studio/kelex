@@ -1,122 +1,118 @@
 # Getting started
 
-kelex turns a Zod schema into a working form. This guide covers the fast path —
-a schema to a wired HTML form — and the second path, a `FormDescriptor` you
-render yourself.
+kelex turns a Zod schema into a form. It's a **plugin host**: you declare which
+plugins to use in a config file, and kelex loads them and runs the pipeline —
+the same way ESLint or Vite read a config and load the plugins named there.
 
 ## Install
 
+Install the host, the plugins you want, and Zod:
+
 ```sh
-pnpm add @rafters/kelex zod
+pnpm add kelex @kelex/plugin-renderer-html @kelex/plugin-handler-post zod
 ```
 
-Zod 4 is a **peer dependency** — kelex reads your live schema graph, so you and
-kelex share one Zod. Node 24+.
+- **`kelex`** — the host: introspection, the engine, the settings loader, the CLI.
+- **`@kelex/plugin-renderer-html`** — the default renderer (schema → HTML).
+- **`@kelex/plugin-handler-post`** — the default handler (HTML → async-POST behavior).
+
+Zod 4 is a **peer dependency** — kelex reads your live schema graph. Node 24+.
 
 > Not yet on npm; until then, build from source (`pnpm build`) and link it.
 
-## A schema to a working form
+## Configure
 
-Three calls: introspect the schema, then render + wire it with the two default
-plugins.
+Write a `kelex.settings.jsonc` in your project. It declares the plugins to load
+and how to run:
 
-```typescript
-import { z } from "zod/v4";
-import { introspect, renderForm, htmlRenderer, postHandler } from "@rafters/kelex";
+```jsonc
+{
+  // The plugins to import and load (must be installed).
+  "renderer": "@kelex/plugin-renderer-html",
+  "handler": "@kelex/plugin-handler-post",
 
-const signupSchema = z.object({
-  email: z.email(),
-  displayName: z.string().min(2).max(40),
-  plan: z.enum(["free", "pro", "team"]),
-  acceptTerms: z.boolean(),
-});
+  // The schema module (imported and evaluated) and its exported schema.
+  "schema": "./src/schema.ts",
+  "export": "signupSchema",
 
-const descriptor = introspect(signupSchema, {
-  formName: "SignupForm",
-  schemaImportPath: "./schema",
-  schemaExportName: "signupSchema",
-});
+  // Where to write the generated form.
+  "out": "signup.html",
 
-const html = renderForm(descriptor, htmlRenderer, postHandler);
-```
-
-`html` is a complete `<form>`: classless, semantic markup with native validation
-attributes derived from the schema, plus a submit script the handler appended.
-
-Ship the example stylesheet alongside it (or copy it and restyle):
-
-```typescript
-import "@rafters/kelex/form.css";
-```
-
-### What you get
-
-- `email` → `<input type="email" required>`; `displayName` → a text input with
-  `minlength="2" maxlength="40"`; `plan` → a radio group; `acceptTerms` → a
-  checkbox. A nested object becomes a `<fieldset>`, an array becomes an
-  add/remove repeater, a discriminated union becomes a variant switch.
-- Every control carries `name` (its path), a unique `id`, a `<label>`, and an
-  empty error slot addressed by the same path.
-- On submit, the handler lets the browser run native HTML5 validation, collects
-  the values (typed — numbers as numbers, checkboxes as booleans) into nested
-  JSON, and `POST`s it to the form's `action`.
-
-Set the POST target with the renderer factory:
-
-```typescript
-import { createHtmlRenderer } from "@rafters/kelex";
-const renderer = createHtmlRenderer({ action: "/api/signup" });
-const html = renderForm(descriptor, renderer, postHandler);
-```
-
-### On the server
-
-kelex ships **no** validation to the browser — the client gate is native HTML5
-only. Do the real validation on the server with the same schema (via Standard
-Schema) and return the issues as JSON; the handler routes each one to its
-control's error slot by path.
-
-```typescript
-// POST /api/signup
-const result = await signupSchema["~standard"].validate(await req.json());
-if (result.issues) {
-  return Response.json({ issues: result.issues }); // -> routed to fields by path
+  // Options forwarded to the renderer plugin.
+  "renderer.options": { "action": "/api/signup" },
 }
-// ... result.value is validated and typed
 ```
 
-A field of type `z.number()`/`z.boolean()` round-trips as a JSON number/boolean,
-so it validates without coercion. A `z.date()` posts as a `YYYY-MM-DD` string —
-use `z.coerce.date()` on the server for those.
+`handler` is optional — omit it for inert markup (no behavior). `.jsonc` allows
+comments and trailing commas.
 
-## The other path: a FormDescriptor
+## Generate
 
-If you want to own rendering, take the descriptor as JSON via the `composite`
-target — the same contract editors and non-JS readers consume.
-
-```typescript
-import { generate, compositeTarget } from "@rafters/kelex";
-
-const { files, warnings } = generate({
-  schema: signupSchema,
-  formName: "SignupForm",
-  schemaImportPath: "./schema",
-  schemaExportName: "signupSchema",
-  target: compositeTarget,
-});
-```
-
-Or from the CLI:
+From the CLI:
 
 ```sh
-kelex generate ./schema.ts -t composite -o form.json -s signupSchema
+kelex form
+# ✓ Generated signup.html
+#   renderer: @kelex/plugin-renderer-html + @kelex/plugin-handler-post
+#   4 fields: email, displayName, plan, acceptTerms
 ```
 
-The schema module is imported and **evaluated** at generate time (kelex reads the
-live graph, not source text), so only point it at a path you trust.
+Flags override the settings file — handy in scripts or CI:
+
+```sh
+kelex form -s ./other.ts -e otherSchema -o other.html -a /api/other
+#   -c/--config  -s/--schema  -e/--export  -o/--out
+#   -r/--renderer  -H/--handler  -a/--action
+```
+
+Or from code:
+
+```typescript
+import { loadSettings, generateForm, writeForm } from "kelex";
+
+const settings = loadSettings("kelex.settings.jsonc");
+const { output, fields } = await generateForm(settings);
+writeForm(settings.out, output);
+```
+
+kelex imports and **evaluates** the schema module to read the live Zod graph
+(not source text), so only point `schema` at a path you trust.
+
+## What you get
+
+With the default plugins, an `email` field becomes `<input type="email"
+required>`, a bounded number becomes a range slider, a nested object becomes a
+`<fieldset>`, an array becomes an add/remove repeater, a discriminated union
+becomes a variant switch. Every control carries `name` (its path), a unique
+`id`, a `<label>`, and a path-addressed error slot. On submit, the handler runs
+native HTML5 validation, collects typed values into nested JSON, and `POST`s to
+the form's `action`.
+
+Ship the renderer's example stylesheet, or copy and restyle it:
+
+```typescript
+import "@kelex/plugin-renderer-html/form.css";
+```
+
+## On the server
+
+kelex ships **no** validation to the browser — the client gate is native HTML5
+only. Validate on the server with the same schema (via Standard Schema) and
+return the issues as JSON; the handler routes each to its control's error slot
+by path.
+
+```typescript
+const result = await signupSchema["~standard"].validate(await req.json());
+if (result.issues) return Response.json({ issues: result.issues });
+// result.value is validated and typed
+```
+
+Number and boolean fields round-trip as JSON numbers/booleans. A `z.date()` posts
+as a `YYYY-MM-DD` string — use `z.coerce.date()` on the server for those.
 
 ## Next
 
-- Write your own renderer or handler: [Writing plugins](./writing-plugins.md).
-- Prove a plugin honors the contract with the `conformance` harness (also in the
-  plugin guide).
+- Swap or build a plugin: [Writing plugins](./writing-plugins.md) — both surfaces,
+  renderer and handler.
+- The `composite` target still emits the raw `FormDescriptor` as JSON
+  (`kelex generate <schema> -t composite`) if you'd rather own rendering entirely.
