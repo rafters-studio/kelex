@@ -48,6 +48,10 @@ export type {
   Variant,
 } from "./engine";
 
+// The default base-HTML renderer (leaf half, #226): a zero-dependency, classless
+// renderer shipped in-package. A true plugin -- imports only the public contract.
+export { htmlRenderer, pathToId } from "./renderers/html";
+
 // The conformance harness: prove a plugin honors the contract. A testing tool
 // (it takes a `names` reader for the opaque `T`), not part of the runtime
 // contract -- exported so plugin authors and kelex's own defaults can run it.
