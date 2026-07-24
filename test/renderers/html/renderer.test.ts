@@ -64,6 +64,10 @@ describe("htmlRenderer -- default base-HTML leaf controls (#226)", () => {
     const few = one(z.enum(["a", "b"]));
     expect(few).toContain('role="radiogroup"');
     expect(few).toContain('type="radio"');
+    // The group is a control too -- it carries the canonical id + aria pair.
+    expect(few).toContain('id="f"');
+    expect(few).toContain('aria-invalid="false"');
+    expect(few).toContain('aria-describedby="f-error"');
 
     const many = one(z.enum(["a", "b", "c", "d", "e", "f"]));
     expect(many).toContain("<select");

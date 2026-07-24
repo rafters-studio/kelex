@@ -32,8 +32,17 @@ const extraAttrs = (config: Record<string, unknown>): Record<string, string | nu
 const input: Composer<string> = (i) => {
   const type = asString(i.config.type, "text");
   if (type === "hidden") {
+    // A hidden input carries no label or error slot, so it drops the aria pair
+    // (which would dangle at a slot that is never rendered) -- keeping only the
+    // join hooks (name/id/data-path).
     const value = i.config.value;
-    return `<input${attrs({ type, ...hookAttrs(i.key), value: value === undefined ? undefined : String(value) })}>`;
+    return `<input${attrs({
+      type,
+      name: i.key,
+      id: pathToId(i.key),
+      "data-path": i.key,
+      value: value === undefined ? undefined : String(value),
+    })}>`;
   }
   const control = `<input${attrs({ type, ...hookAttrs(i.key), ...validationAttrs(i.field), ...extraAttrs(i.config) })}>`;
   return fieldFrame(i.key, i.field.label, control);
@@ -69,7 +78,10 @@ const enumControl: Composer<string> = (i) => {
         return `<label for="${optId}"><input${attrs({ type: "radio", id: optId, name: i.key, value: String(v), required: required && n === 0 ? true : undefined })}>${escapeHtml(String(v))}</label>`;
       })
       .join("");
-    return `<div role="radiogroup" aria-describedby="${id}-error" data-path="${escapeHtml(i.key)}"><span>${escapeHtml(i.field.label)}</span>${options}${errorSlot(i.key)}</div>`;
+    // The group is the control: it carries the canonical id + the aria pair (a
+    // per-option `<label for>` targets each radio; the group is labelled by its
+    // own `<span>`). aria-invalid mirrors every other control's default.
+    return `<div${attrs({ role: "radiogroup", id, "aria-labelledby": `${id}-label`, "aria-describedby": `${id}-error`, "aria-invalid": "false", "data-path": i.key })}><span id="${id}-label">${escapeHtml(i.field.label)}</span>${options}${errorSlot(i.key)}</div>`;
   }
   const options = values
     .map((v) => `<option${attrs({ value: String(v) })}>${escapeHtml(String(v))}</option>`)
