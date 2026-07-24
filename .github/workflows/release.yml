@@ -1,22 +1,25 @@
 name: Release
 
+# Tag-driven, like rafters: bump the version in package.json, commit, then push a
+# matching `vX.Y.Z` tag. This builds, publishes to npm with provenance, and cuts a
+# GitHub Release with auto-generated notes.
+
 on:
   push:
-    branches: [main]
+    tags: ["v*"]
+
+permissions:
+  id-token: write # npm provenance (OIDC)
+  contents: write # create the GitHub Release
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
-  cancel-in-progress: true
+  cancel-in-progress: false
 
 jobs:
-  version:
-    name: Version
+  release:
+    name: Release
     runs-on: ubuntu-latest
-    permissions:
-      contents: write
-      pull-requests: write
-    outputs:
-      hasChangesets: ${{ steps.changesets.outputs.hasChangesets }}
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -31,47 +34,21 @@ jobs:
         with:
           node-version: 24
           cache: pnpm
-
-      - name: Install dependencies
-        run: pnpm install --frozen-lockfile
-
-      - name: Create release PR or detect merged version
-        id: changesets
-        uses: changesets/action@v1
-        with:
-          title: "chore: version packages"
-          commit: "chore: version packages"
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
-  publish:
-    name: Publish
-    needs: version
-    if: needs.version.outputs.hasChangesets == 'false'
-    runs-on: ubuntu-latest
-    permissions:
-      contents: read
-      id-token: write
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      - name: Setup pnpm
-        uses: pnpm/action-setup@v4
-        with:
-          version: 11.13.0
-
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: 24
           registry-url: "https://registry.npmjs.org"
 
-      - name: Install latest npm (>=11.5.1 for OIDC)
+      - name: Install latest npm (>=11.5.1 for OIDC provenance)
         run: npm install -g npm@latest
 
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
+
+      - name: Verify the tag matches package.json version
+        run: |
+          PKG="v$(node -p "require('./package.json').version")"
+          if [ "$PKG" != "$GITHUB_REF_NAME" ]; then
+            echo "::error::tag $GITHUB_REF_NAME does not match package.json version $PKG"
+            exit 1
+          fi
 
       - name: Build
         run: pnpm build
@@ -80,4 +57,9 @@ jobs:
         run: pnpm test:all
 
       - name: Publish to npm
-        run: npm publish --access public
+        run: npm publish --access=public --provenance
+
+      - name: Create GitHub Release
+        run: gh release create "$GITHUB_REF_NAME" --generate-notes
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
