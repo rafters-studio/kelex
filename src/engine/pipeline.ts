@@ -30,11 +30,13 @@ function isTypeOnly(m: Match): boolean {
  * is precise: a constrained entry (`string` + a length bucket) does NOT prove
  * the bare `string` type is handled, so every `FieldType` needs a TYPE-ONLY
  * catch-all. Also checks every named component resolves to a composer. Returns
- * the gaps (empty when complete).
+ * the gaps (empty when complete). Pass `types` to scope the floor to a subset of
+ * FieldTypes -- a leaf-only renderer proves itself against the scalar types
+ * without a container catch-all it does not yet own.
  */
-export function validateRenderer<T>(renderer: Renderer<T>): string[] {
+export function validateRenderer<T>(renderer: Renderer<T>, types?: readonly FieldType[]): string[] {
   const gaps: string[] = [];
-  for (const type of ALL_FIELD_TYPES) {
+  for (const type of types ?? ALL_FIELD_TYPES) {
     if (!renderer.inventory.some((e) => e.match.type === type && isTypeOnly(e.match))) {
       gaps.push(`no type-only catch-all for FieldType "${type}"`);
     }

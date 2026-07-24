@@ -4,6 +4,7 @@ import { render } from "../engine/render";
 import { route } from "../engine/route";
 import type { Handler, Renderer } from "../engine/types";
 import { introspect, type IntrospectOptions } from "../introspection";
+import type { FieldType } from "../introspection/types";
 import { battery } from "./battery";
 import { fuzzSchemas } from "./fuzz";
 
@@ -48,6 +49,13 @@ export interface ConformanceOptions<T> {
   seed?: number;
   /** How many random schemas to fuzz (default 25). */
   fuzzCount?: number;
+  /**
+   * Scope the run to a subset of FieldTypes -- the floor checks only these
+   * catch-alls, the battery keeps only cases whose shapes fit, and the fuzzer
+   * emits only these. A leaf-only renderer proves itself against the scalar
+   * types without owning a container composer it does not have yet.
+   */
+  types?: FieldType[];
 }
 
 const OPTS: IntrospectOptions = {
@@ -85,7 +93,7 @@ export async function conformance<T>(
   handler: Handler<T> | undefined,
   options: ConformanceOptions<T>,
 ): Promise<ConformanceReport> {
-  const { names, seed = 1, fuzzCount = 25 } = options;
+  const { names, seed = 1, fuzzCount = 25, types } = options;
   const failures: ConformanceFailure[] = [];
   const coverage: ConformanceCoverage = {
     schemas: 0,
@@ -95,9 +103,10 @@ export async function conformance<T>(
     rendererLevel: ["floor"],
   };
 
-  // FLOOR -- renderer-level, once. A gap here means fields will fall to fallback,
-  // so report floor alone rather than drowning it in totality noise.
-  const gaps = validateRenderer(renderer);
+  // FLOOR -- renderer-level, once (scoped to `types` when given). A gap here means
+  // fields will fall to fallback, so report floor alone rather than drowning it in
+  // totality noise.
+  const gaps = validateRenderer(renderer, types);
   if (gaps.length > 0) {
     return {
       passed: false,
@@ -106,7 +115,13 @@ export async function conformance<T>(
     };
   }
 
-  const schemas = [...battery, ...fuzzSchemas(seed, fuzzCount)];
+  // A `types` scope keeps only battery cases whose shapes fit, and fuzzes within
+  // those types -- so a leaf-only renderer never sees a container it disowns.
+  const allowed = types && new Set(types);
+  const scopedBattery = allowed
+    ? battery.filter((c) => c.uses.every((t) => allowed.has(t)))
+    : battery;
+  const schemas = [...scopedBattery, ...fuzzSchemas(seed, fuzzCount, types)];
   coverage.schemas = schemas.length;
 
   for (const { name, schema } of schemas) {
@@ -147,9 +162,9 @@ export async function conformance<T>(
     }
   }
 
-  // HANDLER-JOIN -- battery cases with crafted bad data only. Real `~standard`
-  // validation; every resulting issue must bind to a control (none unbound).
-  for (const { name, schema, bad } of battery) {
+  // HANDLER-JOIN -- battery cases with crafted bad data only (within the type
+  // scope). Real `~standard` validation; every resulting issue must bind.
+  for (const { name, schema, bad } of scopedBattery) {
     if (bad === undefined) continue;
     coverage.handlerJoinCases++;
     const descriptor = introspect(schema, OPTS);
