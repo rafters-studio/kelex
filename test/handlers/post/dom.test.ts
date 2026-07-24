@@ -74,6 +74,17 @@ describe("postHandler -- async POST, native client validation, routing (#227)", 
     expect(JSON.parse(init.body as string)).toEqual({ name: "Ada", age: "42" });
   });
 
+  it("gates the client with native validation -- an invalid required field blocks the POST", async () => {
+    const form = mount({ name: z.string() });
+    const fetchMock = stubFetch();
+    // Leave the required `name` empty. The handler calls checkValidity() before
+    // collect/POST, so an invalid form must not POST.
+    (form.querySelector('[name="name"]') as HTMLInputElement).value = "";
+    submit(form);
+    await flush();
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
+
   it("routes a server ~standard issue to its control's error slot by path", async () => {
     const form = mount({ name: z.string() });
     stubFetch([{ message: "Too short", path: ["name"] }]);
