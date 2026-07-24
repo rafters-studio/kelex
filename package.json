@@ -20,6 +20,7 @@
   },
   "files": [
     "dist",
+    "src/renderers/html/form.css",
     "README.md"
   ],
   "type": "module",
@@ -29,7 +30,8 @@
     ".": {
       "import": "./dist/index.js",
       "types": "./dist/index.d.ts"
-    }
+    },
+    "./form.css": "./src/renderers/html/form.css"
   },
   "scripts": {
     "build": "tsdown",

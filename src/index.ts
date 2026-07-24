@@ -48,9 +48,12 @@ export type {
   Variant,
 } from "./engine";
 
-// The default base-HTML renderer (leaf half, #226): a zero-dependency, classless
-// renderer shipped in-package. A true plugin -- imports only the public contract.
-export { htmlRenderer, pathToId } from "./renderers/html";
+// The default base-HTML renderer: a zero-dependency, classless renderer shipped
+// in-package. A true plugin -- imports only the public contract. `htmlRenderer`
+// is the default instance; `createHtmlRenderer({ action })` sets the form POST
+// target. The example stylesheet ships at `@rafters/kelex/form.css`.
+export { createHtmlRenderer, htmlRenderer, pathToId } from "./renderers/html";
+export type { HtmlRendererOptions } from "./renderers/html";
 
 // The conformance harness: prove a plugin honors the contract. A testing tool
 // (it takes a `names` reader for the opaque `T`), not part of the runtime

@@ -45,3 +45,21 @@ export const leafInventory: Entry[] = [
     settings: { type: "hidden", value: "$values" },
   },
 ];
+
+/**
+ * The container type-only catch-alls (#228) -- the other half of the full floor.
+ * object/tuple -> a fieldset group; array/record -> a repeater list; union -> a
+ * variant switch; ref -> an inert recursion boundary. Appended after the leaves;
+ * catch-all order among distinct types does not matter (first-match is per-type).
+ */
+export const containerInventory: Entry[] = [
+  { match: { type: "object" }, component: "group" },
+  { match: { type: "tuple" }, component: "group" },
+  { match: { type: "array" }, component: "list" },
+  { match: { type: "record" }, component: "list" },
+  { match: { type: "union" }, component: "choice" },
+  { match: { type: "ref" }, component: "recursive" },
+];
+
+/** The full base-HTML inventory: leaf specializations + all twelve catch-alls. */
+export const inventory: Entry[] = [...leafInventory, ...containerInventory];
