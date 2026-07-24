@@ -3,8 +3,8 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 import { z } from "zod/v4";
-import { generateForm, loadSettings } from "kelex";
-import type { KelexSettings } from "kelex";
+import { generateForm, loadSettings } from "../src";
+import type { KelexSettings } from "../src";
 
 // A live schema — the programmatic surface takes the schema object, not a path.
 const signupSchema = z.object({

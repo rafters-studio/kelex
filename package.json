@@ -1,28 +1,77 @@
 {
-  "name": "kelex-monorepo",
-  "private": true,
-  "description": "kelex — Zod schema in, form out. Config-driven plugin host + default plugins.",
+  "name": "kelex",
+  "version": "0.1.2",
+  "description": "Zod schema in, form out — a config-driven form plugin host.",
+  "keywords": [
+    "codegen",
+    "form",
+    "plugin",
+    "zod"
+  ],
+  "homepage": "https://rafters.studio/tools/kelex",
   "license": "MIT",
   "repository": {
     "type": "git",
     "url": "https://github.com/rafters-studio/kelex.git"
   },
+  "bin": {
+    "kelex": "./dist/cli.js"
+  },
+  "files": [
+    "dist"
+  ],
   "type": "module",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    },
+    "./engine": {
+      "types": "./dist/engine.d.ts",
+      "import": "./dist/engine.js"
+    },
+    "./introspection": {
+      "types": "./dist/introspection.d.ts",
+      "import": "./dist/introspection.js"
+    },
+    "./conformance": {
+      "types": "./dist/conformance.d.ts",
+      "import": "./dist/conformance.js"
+    },
+    "./targets": {
+      "types": "./dist/targets.d.ts",
+      "import": "./dist/targets.js"
+    },
+    "./schema-writer": {
+      "types": "./dist/schema-writer.d.ts",
+      "import": "./dist/schema-writer.js"
+    }
+  },
+  "publishConfig": {
+    "access": "public"
+  },
   "scripts": {
-    "build": "pnpm -r build",
-    "dev": "pnpm -r --parallel dev",
-    "typecheck": "pnpm -r typecheck",
-    "test": "pnpm -r test",
-    "test:unit": "pnpm -r test:unit",
-    "test:all": "pnpm -r test:all",
-    "lint": "oxlint packages",
-    "lint:fix": "oxlint --fix packages",
+    "build": "tsdown && pnpm -r --filter=\"./packages/*\" build",
+    "dev": "tsdown --watch",
+    "typecheck": "tsc --noEmit && pnpm -r --filter=\"./packages/*\" typecheck",
+    "test": "vitest run --exclude '**/*.spec.ts' && pnpm -r --filter=\"./packages/*\" test",
+    "test:unit": "vitest run --exclude '**/*.spec.ts' && pnpm -r --filter=\"./packages/*\" test:unit",
+    "test:all": "vitest run && pnpm -r --filter=\"./packages/*\" test:all",
+    "lint": "oxlint src test packages",
+    "lint:fix": "oxlint --fix src test packages",
     "format": "oxfmt",
     "format:check": "oxfmt --check",
-    "preflight": "pnpm lint && pnpm build && pnpm typecheck && pnpm -r test:unit",
-    "flightcheck": "pnpm lint && pnpm format:check && pnpm build && pnpm typecheck && pnpm -r test:all"
+    "preflight": "pnpm build && pnpm lint && pnpm typecheck && pnpm test:unit",
+    "flightcheck": "pnpm lint && pnpm format:check && pnpm build && pnpm typecheck && pnpm test:all",
+    "prepublishOnly": "tsdown"
+  },
+  "dependencies": {
+    "commander": "^12.0.0",
+    "jsonc-parser": "^3.3.1"
   },
   "devDependencies": {
+    "@kelex/plugin-handler-post": "workspace:*",
+    "@kelex/plugin-renderer-html": "workspace:*",
     "@types/node": "^25.0.9",
     "happy-dom": "^20.11.1",
     "lefthook": "^2.0.15",
@@ -32,6 +81,9 @@
     "typescript": "^7.0.2",
     "vitest": "^4.1.10",
     "zod": "^4.4.3"
+  },
+  "peerDependencies": {
+    "zod": "^4.0.0"
   },
   "engines": {
     "node": ">=24"

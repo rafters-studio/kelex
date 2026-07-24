@@ -1,10 +1,10 @@
 import { describe, expect, it } from "vitest";
-import { renderForm, validateRenderer } from "kelex/engine";
-import type { FieldConstraints, FieldType } from "kelex/introspection";
-import { introspect } from "kelex/introspection";
+import { renderForm, validateRenderer } from "../../src/engine";
+import type { FieldConstraints, FieldType } from "../../src/introspection";
+import { introspect } from "../../src/introspection";
 import { postHandler } from "@kelex/plugin-handler-post";
 import { htmlRenderer } from "@kelex/plugin-renderer-html";
-import { writeSchema } from "kelex/schema-writer";
+import { writeSchema } from "../../src/schema-writer";
 import { evaluateSchemaCode } from "../helpers/evaluate-schema";
 
 import { patientIntakeSchema } from "./01-healthcare-patient-intake";

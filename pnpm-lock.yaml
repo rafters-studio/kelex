@@ -7,7 +7,20 @@ settings:
 importers:
 
   .:
+    dependencies:
+      commander:
+        specifier: ^12.0.0
+        version: 12.1.0
+      jsonc-parser:
+        specifier: ^3.3.1
+        version: 3.3.1
     devDependencies:
+      '@kelex/plugin-handler-post':
+        specifier: workspace:*
+        version: link:packages/plugin-handler-post
+      '@kelex/plugin-renderer-html':
+        specifier: workspace:*
+        version: link:packages/plugin-renderer-html
       '@types/node':
         specifier: ^25.0.9
         version: 25.9.5
@@ -36,34 +49,6 @@ importers:
         specifier: ^4.4.3
         version: 4.4.3
 
-  packages/integration:
-    devDependencies:
-      '@kelex/plugin-handler-post':
-        specifier: workspace:*
-        version: link:../plugin-handler-post
-      '@kelex/plugin-renderer-html':
-        specifier: workspace:*
-        version: link:../plugin-renderer-html
-      kelex:
-        specifier: workspace:*
-        version: link:../kelex
-      zod:
-        specifier: ^4.4.3
-        version: 4.4.3
-
-  packages/kelex:
-    dependencies:
-      commander:
-        specifier: ^12.0.0
-        version: 12.1.0
-      jsonc-parser:
-        specifier: ^3.3.1
-        version: 3.3.1
-    devDependencies:
-      zod:
-        specifier: ^4.4.3
-        version: 4.4.3
-
   packages/plugin-handler-post:
     devDependencies:
       '@kelex/plugin-renderer-html':
@@ -71,7 +56,7 @@ importers:
         version: link:../plugin-renderer-html
       kelex:
         specifier: workspace:*
-        version: link:../kelex
+        version: link:../..
       zod:
         specifier: ^4.4.3
         version: 4.4.3
@@ -80,7 +65,7 @@ importers:
     devDependencies:
       kelex:
         specifier: workspace:*
-        version: link:../kelex
+        version: link:../..
       zod:
         specifier: ^4.4.3
         version: 4.4.3
