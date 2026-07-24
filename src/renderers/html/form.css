@@ -1,0 +1,112 @@
+/*
+ * kelex base-HTML form -- an example CLASSLESS stylesheet.
+ *
+ * It targets the semantic elements the default renderer emits plus its data and
+ * aria hooks -- no class selectors, so it styles the output as-is. Copy it, or
+ * import it from `@rafters/kelex/form.css`, then override to taste. Nothing here
+ * is required for the form to function; it is presentation only.
+ */
+
+form {
+  display: grid;
+  gap: 1rem;
+  max-width: 40rem;
+}
+
+/* A field row: label above its control, error slot below. */
+form > div,
+fieldset > div {
+  display: grid;
+  gap: 0.25rem;
+}
+
+label {
+  font-weight: 600;
+}
+
+input,
+select,
+textarea {
+  font: inherit;
+  padding: 0.4rem 0.5rem;
+  border: 1px solid #8a8a8a;
+  border-radius: 0.25rem;
+  background: Field;
+  color: FieldText;
+}
+
+textarea {
+  min-height: 6rem;
+  resize: vertical;
+}
+
+input[type="checkbox"],
+input[type="radio"] {
+  width: auto;
+  padding: 0;
+}
+
+/* Grouping: fieldsets for objects/tuples and the array/union containers. */
+fieldset {
+  display: grid;
+  gap: 0.75rem;
+  border: 1px solid #c4c4c4;
+  border-radius: 0.375rem;
+  padding: 0.75rem 1rem 1rem;
+}
+
+legend {
+  font-weight: 700;
+  padding: 0 0.375rem;
+}
+
+/* A required field is marked on its label. */
+:required + label,
+label:has(+ :required) {
+  font-weight: 700;
+}
+
+/* Native + routed invalid states. */
+:user-invalid,
+[aria-invalid="true"] {
+  border-color: #c0392b;
+  outline-color: #c0392b;
+}
+
+/* The path-addressed error slot -- hidden until the handler fills it. */
+[role="alert"] {
+  color: #c0392b;
+  font-size: 0.875rem;
+  min-height: 1rem;
+}
+
+[role="alert"]:empty {
+  display: none;
+}
+
+button {
+  font: inherit;
+  padding: 0.45rem 0.9rem;
+  border: 1px solid #5a5a5a;
+  border-radius: 0.25rem;
+  background: ButtonFace;
+  color: ButtonText;
+  cursor: pointer;
+  justify-self: start;
+}
+
+button[type="submit"] {
+  font-weight: 700;
+}
+
+@media (prefers-color-scheme: dark) {
+  input,
+  select,
+  textarea {
+    border-color: #6a6a6a;
+  }
+
+  fieldset {
+    border-color: #444;
+  }
+}

@@ -110,16 +110,12 @@ const enumControl: Composer<string> = (i) => {
 const fallback: Composer<string> = (i) =>
   `<!-- kelex: no leaf control for "${escapeHtml(i.key)}" (${i.field.type}) -->`;
 
-/** The composers the leaf inventory names, plus the required `form`/`fallback`. */
+/** The composers the leaf inventory names. Containers live in containers.ts. */
 export const leafComposers: Record<string, Composer<string>> = {
   input,
   textarea,
   checkbox,
   enum: enumControl,
 };
-
-/** A minimal form wrapper -- #228 upgrades this to a real `<form action>` + submit. */
-export const form = (children: { rendered: string }[]): string =>
-  `<form>${children.map((c) => c.rendered).join("")}</form>`;
 
 export const leafFallback = fallback;
