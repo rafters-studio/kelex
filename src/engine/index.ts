@@ -1,6 +1,8 @@
-// The plugin engine's PUBLIC surface -- form-word types only. The match/config
-// engine (`matches`, `resolveConfig`) and the join (`controlPaths`) are internal
-// and imported directly by the fold, never re-exported here or from the root.
+// The plugin engine's PUBLIC surface. `render` folds a descriptor through a
+// renderer. The match/config engine (`matches`, `resolveConfig`) and the join
+// (`controlPaths`) are internal and imported directly by the fold, never
+// re-exported here or from the root.
+export { render } from "./render";
 export type {
   Bound,
   Child,
