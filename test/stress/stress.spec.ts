@@ -1,6 +1,10 @@
 import { describe, expect, it } from "vitest";
+import { renderForm, validateRenderer } from "../../src/engine";
+import { controlPaths } from "../../src/engine/paths";
 import type { FieldConstraints, FieldType } from "../../src/introspection";
 import { introspect } from "../../src/introspection";
+import { postHandler } from "../../src/handlers/post";
+import { htmlRenderer } from "../../src/renderers/html";
 import { writeSchema } from "../../src/schema-writer/writer";
 import { evaluateSchemaCode } from "../helpers/evaluate-schema";
 
@@ -623,6 +627,49 @@ describe("Stress test: complex Zod v4 schemas", () => {
             }
           }
         }
+      });
+    });
+  }
+});
+
+// The form pipeline (render + wire) over the same real-world schemas -- the
+// default plugins must produce a complete, conformant form for every one. Real
+// schemas exercise nesting, unions, records, and optionals the fuzzer does not.
+const namesOf = (html: string): string[] => [...html.matchAll(/name="([^"]+)"/g)].map((m) => m[1]);
+
+describe("Form pipeline: default renderer + handler over real schemas", () => {
+  it("the default HTML renderer covers the full floor (every FieldType)", () => {
+    expect(validateRenderer(htmlRenderer)).toEqual([]);
+  });
+
+  for (const testCase of schemas) {
+    describe(testCase.name, () => {
+      it("renders a complete, wired, classless form", () => {
+        const descriptor = introspect(
+          testCase.schema as Parameters<typeof introspect>[0],
+          INTROSPECT_OPTS,
+        );
+        const html = renderForm(descriptor, htmlRenderer, postHandler);
+        expect(html.startsWith("<form")).toBe(true);
+        expect(html).toContain("<script>"); // the handler wired it
+        expect(html).not.toMatch(/\sclass=/); // classless
+        // Never falls to the inert fallback marker for a real field.
+        expect(html).not.toContain("kelex: no leaf control");
+      });
+
+      it("stamps every control path -- path-preservation on a real schema", () => {
+        const descriptor = introspect(
+          testCase.schema as Parameters<typeof introspect>[0],
+          INTROSPECT_OPTS,
+        );
+        // Render without the handler so the extracted names are the form's own,
+        // not the runtime script's string literals.
+        const html = renderForm(descriptor, htmlRenderer);
+        const stamped = new Set(namesOf(html));
+        const missing = controlPaths(descriptor)
+          .map((c) => c.key)
+          .filter((key) => !stamped.has(key));
+        expect(missing, `unstamped controls: ${missing.join(", ")}`).toEqual([]);
       });
     });
   }
