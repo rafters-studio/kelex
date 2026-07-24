@@ -48,6 +48,18 @@ export type {
   Variant,
 } from "./engine";
 
+// The conformance harness: prove a plugin honors the contract. A testing tool
+// (it takes a `names` reader for the opaque `T`), not part of the runtime
+// contract -- exported so plugin authors and kelex's own defaults can run it.
+export { conformance } from "./conformance";
+export type {
+  ConformanceCoverage,
+  ConformanceFailure,
+  ConformanceOptions,
+  ConformanceReport,
+  Invariant,
+} from "./conformance";
+
 export type {
   CodegenTarget,
   CompositeOptions,
