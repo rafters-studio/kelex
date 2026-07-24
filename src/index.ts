@@ -27,9 +27,10 @@ export type { SchemaWriterOptions, SchemaWriterResult } from "./schema-writer";
 
 export { emitField, writeSchema } from "./schema-writer";
 
-// The plugin engine's public contract (form-word types). The fold, the pipeline,
-// and the internal join (`controlPaths`) / match engine (`matches`,
-// `resolveConfig`) are NOT exported -- the plugin API never surfaces a CS term.
+// The plugin engine's public contract (form-word types) and the `render` fold.
+// The internal join (`controlPaths`) / match engine (`matches`, `resolveConfig`)
+// are NOT exported -- the plugin API never surfaces a CS term.
+export { render } from "./engine";
 export type {
   Bound,
   Child,
