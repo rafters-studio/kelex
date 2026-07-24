@@ -34,6 +34,17 @@ describe("route -- the join executed (#224)", () => {
     expect(b.control?.key).toBe("tags.*.label");
   });
 
+  it("binds a record-key issue to the * template by wildcard", () => {
+    // A record's value control uses the same "*" slot as an array row, so a
+    // string key must bind exactly as a numeric index does.
+    const recordControls = controlPaths(
+      introspect(asSchema(z.object({ prefs: z.record(z.string(), z.string().min(1)) })), OPTS),
+    );
+    const [b] = route(recordControls, [{ message: "Too small", path: ["prefs", "theme"] }]);
+    expect(b.key).toBe("prefs.theme");
+    expect(b.control?.key).toBe("prefs.*");
+  });
+
   it("normalizes a {key}-wrapped path", () => {
     const [b] = route(controls, [
       { message: "x", path: [{ key: "tags" }, { key: 5 }, { key: "label" }] },
