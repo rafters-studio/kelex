@@ -117,6 +117,7 @@ describe("htmlRenderer -- containers, form, buttons (#228)", () => {
       "legend",
       "button",
       ":required",
+      ":invalid",
       "[aria-invalid=",
       '[role="alert"]',
       '[role="alert"]:empty',

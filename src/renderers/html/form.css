@@ -66,7 +66,10 @@ label:has(+ :required) {
   font-weight: 700;
 }
 
-/* Native + routed invalid states. */
+/* Native + routed invalid states. `:user-invalid` (styled below) is preferred --
+ * it holds off until the user has interacted, so untouched required fields are
+ * not red on load -- but `:invalid` is included for completeness. */
+:invalid,
 :user-invalid,
 [aria-invalid="true"] {
   border-color: #c0392b;
