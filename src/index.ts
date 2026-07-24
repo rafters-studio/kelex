@@ -30,7 +30,7 @@ export { emitField, writeSchema } from "./schema-writer";
 // The plugin engine's public contract (form-word types) and the `render` fold.
 // The internal join (`controlPaths`) / match engine (`matches`, `resolveConfig`)
 // are NOT exported -- the plugin API never surfaces a CS term.
-export { render } from "./engine";
+export { render, renderForm, validateRenderer } from "./engine";
 export type {
   Bound,
   Child,

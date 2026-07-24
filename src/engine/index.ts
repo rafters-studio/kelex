@@ -2,6 +2,7 @@
 // renderer. The match/config engine (`matches`, `resolveConfig`) and the join
 // (`controlPaths`) are internal and imported directly by the fold, never
 // re-exported here or from the root.
+export { renderForm, validateRenderer } from "./pipeline";
 export { render } from "./render";
 export type {
   Bound,
