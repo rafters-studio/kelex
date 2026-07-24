@@ -4,6 +4,8 @@
 // re-exported here or from the root.
 export { renderForm, validateRenderer } from "./pipeline";
 export { render } from "./render";
+export { route } from "./route";
+export type { Binding, Issue } from "./route";
 export type {
   Bound,
   Child,
