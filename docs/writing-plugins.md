@@ -1,85 +1,86 @@
-# Writing plugins
+# Writing a plugin
 
-kelex is a host. It folds a `FormDescriptor` through two plugin **surfaces** —
-and it loads whichever ones your `kelex.settings.jsonc` names:
+kelex does not know how to draw anything. It reads your schema into a `FormDescriptor` and hands that to two plugins you choose. A renderer turns the descriptor into output. A handler wires that output up.
 
-```typescript
-renderForm(descriptor, renderer, handler?) // = handler ? wire(render(...), ...) : render(...)
+This page builds a renderer from nothing, one runnable step at a time. For the lookup tables, see the [plugin reference](./plugin-reference.md).
+
+## The smallest renderer that runs
+
+A renderer is four things: an inventory that maps a field to a component name, the composers that build output for those names, a wrapper for the whole form, and a fallback.
+
+Here is one, complete. Save it as `tiny.mjs` in a project with `kelex` and `zod` installed, then run it.
+
+```javascript
+import { z } from "zod/v4";
+import { introspect } from "kelex/introspection";
+import { renderForm } from "kelex/engine";
+
+const SCALARS = ["string", "number", "boolean", "date", "enum", "literal"];
+const CONTAINERS = ["object", "array", "union", "tuple", "record", "ref"];
+
+const inventory = [
+  ...SCALARS.map((type) => ({ match: { type }, component: "field" })),
+  ...CONTAINERS.map((type) => ({ match: { type }, component: "box" })),
+];
+
+const compose = {
+  field: (i) => `<label>${i.field.label}<input name="${i.key}"></label>`,
+  box: (i) => {
+    const kids =
+      i.shape === "group"
+        ? i.children.map((c) => c.rendered).join("")
+        : i.shape === "list"
+          ? i.item.rendered
+          : i.shape === "choice"
+            ? i.variants.map((v) => v.children.map((c) => c.rendered).join("")).join("")
+            : "";
+    return `<fieldset><legend>${i.field.label}</legend>${kids}</fieldset>`;
+  },
+};
+
+const renderer = {
+  inventory,
+  compose,
+  form: (children) => `<form>${children.map((c) => c.rendered).join("")}</form>`,
+  fallback: (i) => `<!-- no entry for ${i.key} -->`,
+};
+
+const schema = z.object({
+  email: z.email(),
+  displayName: z.string().min(2),
+  plan: z.enum(["free", "pro"]),
+});
+
+console.log(renderForm(introspect(schema, { formName: "Signup" }), renderer));
 ```
 
-- A **renderer plugin** turns the descriptor into output of some type `T` — an
-  HTML string, a component tree, anything.
-- A **handler plugin** wires that output — state, validation, submit — by control
-  path.
-
-They never call each other. They meet at one join: the descriptor's **canonical
-path**. The renderer stamps each control's `name` with its path; the handler
-routes validation issues back to controls by that same path. Build a renderer, a
-handler, or both; mix a kit's renderer with someone else's handler.
-
-The default `@kelex/plugin-renderer-html` and `@kelex/plugin-handler-post` are the
-reference implementation. Read their source alongside this guide.
-
-## The plugin contract (both surfaces)
-
-Every plugin is its own package that **default-exports a factory**:
-
-```typescript
-// (options from settings) => the plugin
-export default function create(options = {}) {
-  /* return a Renderer or Handler */
-}
+```sh
+$ node tiny.mjs
+<form><label>Email<input name="email"></label><label>Display Name<input name="displayName"></label><label>Plan<input name="plan"></label></form>
 ```
 
-The host resolves the package named in the settings from **your project**,
-imports it, and calls that factory with the plugin's options. Depend on `kelex`
-for the contract types (all type-only — erased at runtime) and import nothing
-else private:
+Forty lines and it renders. Everything after this is refinement.
 
-```typescript
-import type { Renderer, Handler, Composer, Input, Entry, Control } from "kelex/engine";
+## Why twelve inventory entries
+
+kelex makes exactly one guarantee: it will not drop a field. To keep that promise it checks your inventory before rendering and throws if any field type has no entry that matches on type alone.
+
+Twelve types need a catch-all: `string`, `number`, `boolean`, `date`, `enum`, `literal`, `object`, `array`, `union`, `tuple`, `record`, `ref`.
+
+A constrained entry does not count. An entry matching `string` plus a length bucket proves you handled long strings, not that you handled strings. That is why the example maps every type before it does anything clever.
+
+Check without rendering:
+
+```javascript
+import { validateRenderer } from "kelex/engine";
+console.log(validateRenderer(renderer)); // [] when complete
 ```
 
-Declare `kelex` and `zod` as peer dependencies and tag the package with the
-`kelex-plugin` keyword so it's discoverable. The official plugins use the
-`@kelex/plugin-<surface>-<name>` convention.
+Pass a subset while you are still building: `validateRenderer(renderer, ["string", "number"])`. A leaf-only renderer can prove itself against scalars without owning containers yet.
 
----
+## Order is precedence
 
-## Surface 1 — a renderer plugin
-
-```typescript
-interface Renderer<T> {
-  inventory: Entry[]; // data: match a field -> a component
-  compose: Record<string, Composer<T>>; // code: build T for a component
-  form: (children: Child<T>[]) => T; // wrap the top-level fields
-  fallback: Composer<T>; // a field no entry matched
-}
-```
-
-### The inventory is data
-
-The inventory is the **data half** — an ordered list of entries. Ship it as a
-file (the default ships `inventory.jsonl`, one entry per line) and load it in the
-factory, so it's editable on its own — by hand or a future UI — without touching
-code:
-
-```typescript
-import { readFileSync } from "node:fs";
-import { join } from "node:path";
-import type { Entry } from "kelex/engine";
-
-function loadInventory(): Entry[] {
-  return readFileSync(join(import.meta.dirname, "..", "inventory.jsonl"), "utf8")
-    .split("\n")
-    .filter((l) => l.trim() && !l.startsWith("//"))
-    .map((l) => JSON.parse(l) as Entry);
-}
-```
-
-`render` picks the **first** entry whose `match` a field satisfies, then calls the
-composer named by that entry's `component`. Order is precedence — specializations
-sit above the type-only catch-all:
+The first entry whose `match` a field satisfies wins. Specializations go above the catch-all, never below it:
 
 ```jsonl
 {"match":{"type":"string","format":"email"},"component":"input","settings":{"type":"email"}}
@@ -87,127 +88,127 @@ sit above the type-only catch-all:
 {"match":{"type":"string"},"component":"input","settings":{"type":"text"}}
 ```
 
-`Match` pins `type` and optionally narrows on `format`, a `.meta({ ui })` hint,
-length/number buckets, or object field names. An entry's `settings` become the
-composer's `config` after `$ref`s resolve from the field's own facts — `"$values"`
-reads an enum's values, `{ "ref": "$maxLength", "default": 100 }` reads a
-constraint or falls back. So a composer only ever sees final values.
+Put the bare `{"type":"string"}` first and nothing below it ever matches. There is no specificity scoring to save you; the list is read top to bottom and the first hit claims the field.
 
-### Composers and the five shapes
+An entry's `settings` reach the composer as `i.config` with any `$ref` already resolved against the field, so a composer only ever sees final values. Refs copy; they do not compute. There is no arithmetic in the inventory.
 
-`render` walks the schema's own topology. Every field is one of five shapes, and
-the composer receives an `Input<T>` telling it which:
+## Ship the inventory as data
 
-| shape       | schema topology              | the `Input` carries                   |
-| ----------- | ---------------------------- | ------------------------------------- |
-| `control`   | a scalar (string, number, …) | just `field`, `key`, `config`         |
-| `group`     | an object or tuple           | `children: Child<T>[]`                |
-| `list`      | an array or record           | `item: Child<T>` (a `*` slot)         |
-| `choice`    | a union                      | `variants: Variant<T>[]`              |
-| `recursive` | a `z.lazy` boundary          | nothing below (the widget expands it) |
+The example builds the inventory in JavaScript because that is the shortest thing that runs. Real renderers ship it as a file:
 
-A `Child<T>` is `{ field, key, rendered }` — its subtree is **already rendered**
-to `T`, so a composer just places `child.rendered`; it never recurses. `key` is
-the canonical path (`tags.*.label`, with `*` for a template slot). Stamp it as the
-control's `name` — that is the join the handler relies on.
+```javascript
+import { readFileSync } from "node:fs";
+import { join } from "node:path";
 
-```typescript
-const compose: Record<string, Composer<string>> = {
-  input: (i) => `<input name="${i.key}" type="${i.config.type ?? "text"}">`,
-  group: (i) =>
-    i.shape === "group" ? `<fieldset>${i.children.map((c) => c.rendered).join("")}</fieldset>` : "",
-  // ...list, choice, recursive
-};
+function loadInventory() {
+  return readFileSync(join(import.meta.dirname, "..", "inventory.jsonl"), "utf8")
+    .split("\n")
+    .filter((l) => l.trim() && !l.startsWith("//"))
+    .map((l) => JSON.parse(l));
+}
 ```
 
-### The floor
+Data rather than code is the point. A JSONL inventory can be read by a plugin author who does not write TypeScript, which is the whole reason a Rails or Laravel renderer is possible. It also means a component catalog that grows on someone else's schedule does not require editing a switch statement in your source.
 
-Because kelex can't know your components, the one guarantee it enforces is that
-**nothing is dropped**: `renderForm` runs a completeness check up front and throws
-if your inventory lacks a type-only catch-all for any `FieldType`, or names a
-component with no composer. Cover every scalar and container type with a bare
-`{ "type": … }` entry. (`validateRenderer(renderer)` from `kelex/engine` returns
-the gaps if you want to check without rendering.)
+`import.meta.dirname` needs Node 20.11 or newer, and an ESM package.
 
-### Package it
+## The five shapes
 
-```typescript
-import type { Renderer } from "kelex/engine";
+Your composer receives an `Input` telling it which shape the field is. The example handles three of them and returns an empty string for the rest, which is fine for a first pass and wrong for a real renderer.
 
-export default function createRenderer(options: { action?: string } = {}): Renderer<string> {
+| shape       | schema topology     | what the input carries      |
+| ----------- | ------------------- | --------------------------- |
+| `control`   | a scalar            | `field`, `key`, `config`    |
+| `group`     | an object or tuple  | `children`                  |
+| `list`      | an array or record  | `item`, a `*` template slot |
+| `choice`    | a union             | `variants`                  |
+| `recursive` | a `z.lazy` boundary | nothing below it            |
+
+Children arrive already rendered. A `Child` is `{ field, key, rendered }` and your composer places `child.rendered` where it belongs. You never recurse; kelex already did.
+
+## Where the example is wrong
+
+The `choice` branch above renders every variant at once and renders the discriminator as an ordinary field. Both are bugs, and they are the reason unions deserve a real composer rather than a fold over children.
+
+A union is exclusive. One variant is live and the rest must be hidden and disabled, or the browser will submit fields the user never filled and native validation will block on a control nobody can see. The discriminator is the selector that chooses between panels, not a text input.
+
+The default HTML renderer solves this with a `<select data-variant-of>` plus panels marked `data-variant` and `data-when`, and the handler disables the inactive ones. Read `packages/plugin-renderer-html/src/containers.ts` before you write your own.
+
+## Stamp the path
+
+The `key` on every input is the field's canonical path: `email`, `tags.*.label`, `address.city`. The `*` marks a template slot in a repeater.
+
+Put it on the control as `name`. That single line is the entire contract between the two plugins:
+
+```javascript
+field: (i) => `<input name="${i.key}">`,
+```
+
+The renderer stamps the path. The handler finds the control by that path when the server sends back an issue. Neither knows anything else about the other, which is why you can pair a renderer with a handler that was written years later by someone else.
+
+## Package it
+
+A plugin is its own package that default-exports a factory. The host resolves the package name from your project, imports it, and calls the factory with whatever options the settings gave it.
+
+```javascript
+export default function createRenderer(options = {}) {
   return { inventory: loadInventory(), compose, form: makeForm(options), fallback };
 }
 ```
 
-Ship the `inventory.jsonl` (and any assets like a stylesheet) in the package's
-`files`. Point the settings' `renderer` at the package name.
+Declare `kelex` and `zod` as peer dependencies, tag the package with the `kelex-plugin` keyword, and list `inventory.jsonl` in `files` so it ships. The official ones are named `@kelex/plugin-renderer-html` and `@kelex/plugin-handler-post`, so yours would be `@kelex/plugin-renderer-shadcn` or `plugin-handler-zustand`.
 
----
+Then name it in the settings:
 
-## Surface 2 — a handler plugin
-
-```typescript
-interface Handler<T> {
-  wire(form: T, controls: Control[], descriptor: FormDescriptor): T;
+```jsonc
+{
+  "renderer": "my-renderer",
+  "handler": "@kelex/plugin-handler-post",
 }
 ```
 
-A handler has **no inventory** — it is uniform over controls, blind to which
-components the renderer chose. It gets the rendered form, the flat list of
-`Control`s (`{ field, key }`), and the descriptor, and returns wired output of the
-same `T` (wrap-in-place). The default handler reads only the DOM hooks the
-renderer stamped (`name`/`data-path`, error slots, `data-variant`, `data-add-row`,
-…) — so any conforming renderer's output works.
+The host requires both keys today, so a renderer-only project still has to name a handler. Use the default one if you have nothing to wire.
 
-### The join, executed
+## Writing a handler instead
 
-When your server validates and returns Standard Schema issues, route them to
-controls by path with the `route` helper — it matches a runtime issue path
-(`tags.2.label`) to a control's template key (`tags.*.label`) by `*` wildcard, and
-surfaces any issue that binds to nothing:
+A handler has no inventory. It gets the rendered form, a flat list of controls, and the descriptor, and returns output of the same type.
 
-```typescript
+```javascript
+export default function createHandler(options = {}) {
+  return { wire: (form, controls, descriptor) => `${form}\n<script>${runtime}</script>` };
+}
+```
+
+It is blind to components on purpose. It reads only the hooks the renderer stamped, which is why any conforming renderer works with any conforming handler.
+
+When your server returns Standard Schema issues, match them to controls with `route`:
+
+```javascript
 import { route } from "kelex/engine";
 
-const bindings = route(controls, issues); // Binding[] = { key, message, control? }
-for (const b of bindings) {
+for (const b of route(controls, issues)) {
   if (b.control) markError(b.control, b.message);
-  else showFormLevelError(b.message); // unbound -- never dropped
+  else showFormLevelError(b.message);
 }
 ```
 
-### Package it
+`route` matches a runtime path like `tags.2.label` to a template key like `tags.*.label`, and hands back anything that bound to nothing so you can show it rather than swallow it.
 
-```typescript
-import type { Handler } from "kelex/engine";
+Note that `route` is a real import, not a type. A handler that uses it needs `kelex` at runtime, unlike a renderer that only imports types.
 
-export default function createHandler(options = {}): Handler<string> {
-  return { wire: (form) => `${form}\n<script>${runtime}</script>` };
-}
-```
+## Prove it
 
-Point the settings' `handler` at the package name.
+kelex cannot test your components. It can test the contract against the whole schema space, which is the part you are most likely to get wrong.
 
----
-
-## Prove it with conformance
-
-kelex can't test your components, but it can test the **contract** against the
-schema space. `conformance` runs a battery of generated schemas plus a seeded
-fuzzer and asserts the invariants a plugin must honor — the floor, totality
-(nothing hits `fallback`), path-preservation (every control path is stamped in the
-output), determinism, and the handler join:
-
-```typescript
+```javascript
 import { conformance } from "kelex/conformance";
 
 const report = await conformance(myRenderer, myHandler, {
-  // T is opaque to the engine, so tell it how to read stamped names out of your output
   names: (output) => extractNames(output),
 });
-if (!report.passed) console.error(report.failures); // { invariant, schema, detail }
+if (!report.passed) console.error(report.failures);
 ```
 
-Run it against your plugin(s) before you publish. Pass `{ types: ["string",
-"number", …] }` to scope a run to a subset of field types — useful while a renderer
-is still leaf-only.
+The `names` function tells kelex how to read stamped paths back out of your output, because your output type is opaque to it. A shape battery plus a seeded fuzzer then check the floor, totality, path preservation, determinism, and the handler join.
+
+Run it before you publish. Scope it with `{ types: ["string", "number"] }` while the renderer is still leaf-only.

@@ -1,53 +1,68 @@
 # kelex
 
-Zod schema in, form out. kelex is a **plugin host**: a `kelex.settings.jsonc`
-declares which plugins to load, and kelex reads your live Zod schema, loads the
-plugins, and produces a form — the way ESLint or Vite read a config and load the
-plugins named there.
+Zod schema in, form out. One CLI, two plugins.
 
-> **Status: pre-release.** The host, the plugin contract, and the two default
-> plugins (a base-HTML renderer and an async-POST handler) are built and tested.
-> Not yet published to npm — build from a local checkout.
+No opinion about your framework. No values kelex did not read out of your schema. No validation shipped to the browser.
 
-## What it does
+> Status: pre-release. The host, the plugin contract, and the two default plugins are built and tested. Not on npm yet, so build from a checkout.
 
-kelex introspects a live Zod schema into a `FormDescriptor`, then folds it through
-two plugin **surfaces** it loads from your settings: a **renderer** (schema →
-output) and a **handler** (output → behavior).
+## Show it running
 
-```mermaid
-flowchart LR
-  A["Zod schema"] -- introspect --> B["FormDescriptor"]
-  B -- "renderer plugin" --> C["markup"]
-  C -- "handler plugin" --> D["a wired form"]
+A schema you already wrote:
+
+```typescript
+import { z } from "zod/v4";
+
+export const signupSchema = z.object({
+  email: z.email(),
+  displayName: z.string().min(2).max(40),
+  plan: z.enum(["free", "pro"]),
+  acceptTerms: z.boolean(),
+});
 ```
 
-The renderer and handler never coordinate directly — they meet at one join, the
-descriptor's canonical path (`name = path`). So you can swap either half, or write
-your own.
+One command:
 
-## Monorepo
+```sh
+$ kelex form ./signup.ts -e signupSchema -o signup.html -a /api/signup
+✓ Generated signup.html
+  renderer: @kelex/plugin-renderer-html + @kelex/plugin-handler-post
+  4 fields: email, displayName, plan, acceptTerms
+```
 
-| package                           | what it is                                            |
-| --------------------------------- | ----------------------------------------------------- |
-| **`kelex`**                       | the host: introspection, engine, settings loader, CLI |
-| **`@kelex/plugin-renderer-html`** | default renderer — classless, zero-dependency HTML    |
-| **`@kelex/plugin-handler-post`**  | default handler — framework-free async POST           |
+What lands in `signup.html`, one field of it, line-wrapped to read:
 
-The core exposes explicit entry points (`kelex/engine`, `kelex/introspection`,
-`kelex/conformance`, …) — no god barrel. Plugins depend only on the public
-contract.
+```html
+<div>
+  <label for="email">Email</label>
+  <input
+    type="email"
+    name="email"
+    id="email"
+    data-path="email"
+    aria-invalid="false"
+    aria-describedby="email-error"
+    required
+  />
+  <span id="email-error" data-error-for="email" role="alert" aria-live="polite"></span>
+</div>
+```
 
-## Quick start
+`z.email()` became `type="email"` and `required`. `.min(2).max(40)` became `minlength` and `maxlength`. The enum became a radio group with `role="radiogroup"`. Every control carries its path as `name`, an `id` its label points at, and an empty error slot the handler fills when the server rejects something.
 
-Install the host, the plugins you want, and Zod:
+kelex read all of that off the schema. It added nothing.
+
+## Install
 
 ```sh
 pnpm add kelex @kelex/plugin-renderer-html @kelex/plugin-handler-post zod
 ```
 
-Declare **which plugins** to load in `kelex.settings.jsonc` — that's all the
-config holds; the schema and output are run-time inputs:
+Zod 4 is a peer dependency, because kelex reads your live schema graph rather than your source text. Node 24 or newer.
+
+## Configure
+
+The settings file names the plugins. That is all it holds.
 
 ```jsonc
 {
@@ -56,58 +71,51 @@ config holds; the schema and output are run-time inputs:
 }
 ```
 
-Run it — the schema is the argument, output and options are flags:
+The schema, the output path, and per-run options are arguments, not config. Nothing about a particular form belongs in this file.
 
-```sh
-kelex form ./src/schema.ts -e signupSchema -o signup.html -a /api/signup
-# ✓ Generated signup.html
-#   renderer: @kelex/plugin-renderer-html + @kelex/plugin-handler-post
-#   4 fields: email, displayName, plan, acceptTerms
-```
+## Or run it in code
 
-Or drive it from code — pass a live schema; kelex loads the settings and plugins
-itself:
+The CLI is one way in. There are two others.
+
+On Node, `generateForm` does what the CLI does. It reads the settings file, resolves the plugins, and hands back the output.
 
 ```typescript
-import { z } from "zod/v4";
 import { generateForm, writeForm } from "kelex";
 
-const { output } = await generateForm(z.object({ email: z.email() }), {
-  rendererOptions: { action: "/api/signup" },
-});
+const { output } = await generateForm(schema, { rendererOptions: { action: "/api/signup" } });
 writeForm("signup.html", output);
 ```
 
-See [Getting started](./docs/getting-started.md).
+In a browser, skip the settings file and call the engine directly. `kelex/introspection` and `kelex/engine` import nothing from Node, so they run wherever Zod runs.
 
-With the default plugins that emits a complete, accessible, classless `<form>`:
-constraints become native validation attributes, every control carries its path
-as `name` plus a `<label>` and an error slot, and the handler validates natively
-in the browser, collects typed JSON, and POSTs it — routing the server's
-Standard-Schema issues back to the right fields.
+```typescript
+import { introspect } from "kelex/introspection";
+import { renderForm } from "kelex/engine";
 
-## The plugin surfaces
+const html = renderForm(introspect(schema, { formName: "Signup" }), renderer, handler);
+document.querySelector("#mount").innerHTML = html;
+```
 
-- A **`Renderer<T>`** is data + code: an ordered **inventory** (shipped as a data
-  file — the default's is `inventory.jsonl` — that matches a field's facts to a
-  component) plus **composers**, one per schema shape. There are five shapes, in
-  form-words: `control` (a scalar), `group` (object/tuple), `list` (array/record),
-  `choice` (union), `recursive` (a `z.lazy` boundary).
-- A **`Handler<T>`** wires the rendered form by control path. It has **no
-  inventory** — uniform over controls, blind to components.
+The difference is where the renderer comes from. On Node the host resolves it by package name off disk. In a browser you import it and pass it, and its inventory has to be inlined or fetched rather than read off the filesystem.
 
-Each plugin is its own package that default-exports a `(options) => plugin`
-factory; the host resolves and loads it from your project. `renderForm` runs a
-completeness check (the _floor_) and throws if a renderer can't answer some field
-type — a field is never silently dropped. Write your own on either surface:
-[Writing plugins](./docs/writing-plugins.md).
+That is the whole portability story. Introspection and the fold are pure. The CLI, the settings loader, and reading an inventory file are not.
 
-## Conformance
+## The two plugins
 
-Because kelex can't know a plugin's components, the only testable surface of the
-contract is the schema space. `conformance` runs a shape battery plus a seeded
-fuzzer and asserts the invariants a plugin must honor — floor, totality,
-path-preservation, determinism, and the handler join:
+kelex introspects the schema into a `FormDescriptor`, then folds it through a renderer and a handler. They never call each other. They meet on one thing: the descriptor's canonical path, stamped as each control's `name`.
+
+| plugin     | job                               | made of                                   |
+| ---------- | --------------------------------- | ----------------------------------------- |
+| `Renderer` | descriptor to output of some type | an inventory (data) plus composers (code) |
+| `Handler`  | wire that output                  | one `wire` function, no inventory         |
+
+Swap either half. Two ship today and more are planned; see [the plugin catalog](./docs/plugins/index.md). To write your own, start with [writing a plugin](./docs/writing-plugins.md).
+
+## What kelex guarantees
+
+One thing: nothing gets dropped. Before rendering, `renderForm` checks that your inventory answers every field type and that every component it names has a composer. If it does not, kelex throws instead of quietly skipping a field.
+
+Everything else is your call. kelex cannot test your components, so it tests the contract against the schema space instead:
 
 ```typescript
 import { conformance } from "kelex/conformance";
@@ -117,49 +125,65 @@ import createHandler from "@kelex/plugin-handler-post";
 const report = await conformance(createRenderer(), createHandler(), {
   names: (html) => [...html.matchAll(/name="([^"]+)"/g)].map((m) => m[1]),
 });
-report.passed; // true — the defaults are their own baseline
+report.passed; // true
 ```
 
-## The FormDescriptor (the other path)
+A shape battery plus a seeded fuzzer, asserting the floor, totality, path preservation, determinism, and the handler join.
 
-If you'd rather own rendering entirely, take the descriptor as JSON via the
-`composite` target — the same contract editors and non-JS readers consume:
+## On the server
+
+kelex ships no validation to the browser. The client gate is native HTML5. Validate on the server with the same schema and return the issues; the handler routes each one to its control by path.
+
+```typescript
+const result = await signupSchema["~standard"].validate(await req.json());
+if (result.issues) return Response.json({ issues: result.issues });
+```
+
+Numbers and booleans round-trip as JSON numbers and booleans. A `z.date()` posts as a `YYYY-MM-DD` string, so use `z.coerce.date()` on the server for those.
+
+## If you would rather render it yourself
+
+Take the descriptor as JSON and ignore the plugins:
 
 ```sh
-kelex generate ./schema.ts -t composite -o form.json -s signupSchema
+kelex generate ./signup.ts -t composite -o form.json -s signupSchema
 ```
 
-`introspect`, `writeSchema`, and the target registry are exported from
-`kelex/introspection`, `kelex/schema-writer`, and `kelex/targets`.
+That is the same contract editors and non-JavaScript readers consume.
+
+## What it reads
+
+| construct                                                                                    | notes                                            |
+| -------------------------------------------------------------------------------------------- | ------------------------------------------------ |
+| `string`, `number`, `boolean`, `date`, `enum`, `literal`                                     | scalars                                          |
+| `object`, `array`, `tuple`, `record`, `union`, `discriminatedUnion`                          | containers, nested                               |
+| `z.lazy`                                                                                     | recursive schemas                                |
+| `optional`, `nullable`, `default`, `catch`, `readonly`                                       | wrappers, peeled; inner constraints survive      |
+| `describe`, `meta`                                                                           | labels and `ui` hints                            |
+| `min`/`max`, `minLength`/`maxLength`, `.length()`, `regex`, formats, `startsWith`/`endsWith` | carried onto the descriptor, gt vs gte preserved |
+
+Field order is preserved. Anything the reader cannot represent is reported as a warning, never dropped in silence.
+
+## Packages
+
+| package                                                          | what it is                                          |
+| ---------------------------------------------------------------- | --------------------------------------------------- |
+| `kelex`                                                          | the host: introspection, engine, settings, CLI      |
+| [`@kelex/plugin-renderer-html`](./docs/plugins/renderer-html.md) | default renderer, classless HTML, zero dependencies |
+| [`@kelex/plugin-handler-post`](./docs/plugins/handler-post.md)   | default handler, async POST, no framework           |
+
+Renderers for rafters and shadcn are planned, as are handlers for nanostores, zustand, TanStack Form, and React Hook Form. The [catalog](./docs/plugins/index.md) tracks what ships and what does not.
+
+Entry points are explicit: `kelex/engine`, `kelex/introspection`, `kelex/conformance`, `kelex/targets`, `kelex/schema-writer`. Plugins depend on the public contract and nothing else.
 
 ## Docs
 
-- [Getting started](./docs/getting-started.md) — install, the settings file, the
-  CLI and API, the server side.
-- [Writing plugins](./docs/writing-plugins.md) — both surfaces, the inventory data
-  file, the load contract, and conformance.
-
-## Supported Zod constructs
-
-Introspection handles `string`, `number`, `boolean`, `date`, `enum`, `literal`,
-`object` (nested), `array`, `tuple`, `record`, `union`, `discriminatedUnion`, and
-recursive schemas (`z.lazy`), plus `optional`, `nullable`, `default`, and
-`describe`/`meta`. Constraints are carried onto the descriptor: `min`/`max` with
-gt-vs-gte inclusivity, `minLength`/`maxLength`, exact `.length()`, `regex`, string
-formats, `startsWith`/`endsWith`. Field order is preserved. Constructs the reader
-cannot represent are reported as warnings rather than dropped silently.
-
-## Requirements
-
-- **Zod 4** (`zod@^4.0.0`) — peer dependency; schemas are read from the live graph.
-- **Node 24**.
+[Getting started](./docs/getting-started.md) walks the install, the settings file, the CLI, and the server side. [Plugins](./docs/plugins/index.md) lists what is available and documents each one. [Writing a plugin](./docs/writing-plugins.md) builds a renderer from scratch. [Plugin reference](./docs/plugin-reference.md) holds the match keys, input shapes, and the floor.
 
 ## Development
 
-- `pnpm` only. This is a pnpm-workspaces monorepo. `pnpm build`, `pnpm -r test`,
-  `pnpm flightcheck` before a PR.
-- Lint/format: oxlint + oxfmt. TypeScript 7. Builds with tsdown, tests with vitest.
+pnpm only. `pnpm build`, `pnpm -r test`, `pnpm flightcheck` before a PR. oxlint and oxfmt, TypeScript 7, tsdown, vitest.
 
 ## License
 
-MIT
+MIT. All of it.
