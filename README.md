@@ -161,12 +161,14 @@ That is the same contract editors and non-JavaScript readers consume.
 | -------------------------------------------------------------------------------------------- | ------------------------------------------------ |
 | `string`, `number`, `boolean`, `date`, `enum`, `literal`                                     | scalars                                          |
 | `object`, `array`, `tuple`, `record`, `union`, `discriminatedUnion`                          | containers, nested                               |
-| `z.lazy`                                                                                     | recursive schemas                                |
+| `z.lazy`, getter recursion                                                                   | recursive schemas                                |
 | `optional`, `nullable`, `default`, `catch`, `readonly`                                       | wrappers, peeled; inner constraints survive      |
 | `describe`, `meta`                                                                           | labels and `ui` hints                            |
 | `min`/`max`, `minLength`/`maxLength`, `.length()`, `regex`, formats, `startsWith`/`endsWith` | carried onto the descriptor, gt vs gte preserved |
+| `refine`, `superRefine`, `check`                                                             | recorded as present, not reasoned through        |
+| `transform`, `pipe`                                                                          | input side read; output side not represented     |
 
-Field order is preserved. Anything the reader cannot represent is reported as a warning, never dropped in silence.
+Field order is preserved. Anything the reader cannot represent is reported as a [warning](./docs/warnings.md), never dropped in silence. [Schemas](./docs/schemas.md) has the full list, how labels are derived, and how to generate schemas for kelex from another language.
 
 ## Packages
 
