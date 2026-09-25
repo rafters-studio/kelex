@@ -135,6 +135,20 @@ describe("recursion spelled with getters, the Zod 4 idiom (#251)", () => {
     expect(JSON.stringify(d.fields)).toContain('"kind":"ref"');
   });
 
+  it("closes a cycle through an intersection, which is flattened anew on every visit", () => {
+    const Base = z.object({ name: z.string() });
+    const Node: z.ZodType = z.intersection(
+      Base,
+      z.object({
+        get child() {
+          return Node.optional();
+        },
+      }),
+    );
+    const d = introspect(z.object({ root: Node }), OPTS);
+    expect(refsOf(d.fields)).toEqual([["root.child", ["root"]]]);
+  });
+
   it("keys on the path, not the schema: a sibling reusing one schema still expands", () => {
     const Address = z.object({ street: z.string() });
     const d = introspect(z.object({ home: Address, work: Address }), OPTS);
