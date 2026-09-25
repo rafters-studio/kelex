@@ -1,4 +1,4 @@
-import type { FieldDescriptor } from "kelex/introspection";
+import type { FieldDescriptor } from "@rafters/kelex/introspection";
 import { pathToId } from "./path-id";
 
 /** Escape a string for safe use in HTML text or a double-quoted attribute value. */

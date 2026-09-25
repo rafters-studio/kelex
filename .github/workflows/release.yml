@@ -60,8 +60,8 @@ jobs:
         run: |
           mkdir -p .release
           pnpm pack --pack-destination "$PWD/.release"
-          pnpm --filter @kelex/plugin-renderer-html pack --pack-destination "$PWD/.release"
-          pnpm --filter @kelex/plugin-handler-post pack --pack-destination "$PWD/.release"
+          pnpm --filter @rafters/kelex-renderer-html pack --pack-destination "$PWD/.release"
+          pnpm --filter @rafters/kelex-handler-post pack --pack-destination "$PWD/.release"
 
       # kelex first: the plugins declare it as a peer. A package already at this
       # version is skipped, so re-running the tag after a partial publish finishes
@@ -78,9 +78,9 @@ jobs:
               npm publish ".release/$2-$version.tgz" --access public --provenance
             fi
           }
-          publish kelex kelex
-          publish @kelex/plugin-renderer-html kelex-plugin-renderer-html
-          publish @kelex/plugin-handler-post kelex-plugin-handler-post
+          publish @rafters/kelex rafters-kelex
+          publish @rafters/kelex-renderer-html rafters-kelex-renderer-html
+          publish @rafters/kelex-handler-post rafters-kelex-handler-post
 
       - name: Create the GitHub Release
         env:

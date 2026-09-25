@@ -1,5 +1,5 @@
 {
-  "name": "@kelex/plugin-handler-post",
+  "name": "@rafters/kelex-handler-post",
   "version": "0.1.2",
   "description": "Default async-POST handler plugin for kelex — framework-free, native client validation.",
   "keywords": [
@@ -37,12 +37,12 @@
     "prepublishOnly": "pnpm build"
   },
   "devDependencies": {
-    "@kelex/plugin-renderer-html": "workspace:*",
-    "kelex": "workspace:*",
+    "@rafters/kelex": "workspace:*",
+    "@rafters/kelex-renderer-html": "workspace:*",
     "zod": "^4.4.3"
   },
   "peerDependencies": {
-    "kelex": "workspace:^",
+    "@rafters/kelex": "workspace:^",
     "zod": "^4.0.0"
   }
 }

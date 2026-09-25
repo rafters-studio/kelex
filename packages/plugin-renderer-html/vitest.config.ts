@@ -7,7 +7,7 @@ const kelexSrc = fileURLToPath(new URL("../../src", import.meta.url));
 
 export default defineConfig({
   resolve: {
-    alias: [{ find: /^kelex\/(.*)$/, replacement: `${kelexSrc}/$1/index.ts` }],
+    alias: [{ find: /^@rafters\/kelex\/(.*)$/, replacement: `${kelexSrc}/$1/index.ts` }],
   },
   test: {
     globals: true,

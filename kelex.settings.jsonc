@@ -1,8 +1,8 @@
 {
   // The only required settings: which plugins to import and load.
   // Everything else (schema, output, options) is a run-time input.
-  "renderer": "@kelex/plugin-renderer-html",
-  "handler": "@kelex/plugin-handler-post",
+  "renderer": "@rafters/kelex-renderer-html",
+  "handler": "@rafters/kelex-handler-post",
 
   // Optional: default options for the plugins (a run can override them).
   "renderer.options": { "action": "/api/submit" },

@@ -1,4 +1,4 @@
-import type { Renderer } from "kelex/engine";
+import type { Renderer } from "@rafters/kelex/engine";
 import { leafComposers, leafFallback } from "./composers";
 import { containerComposers, type HtmlRendererOptions, makeForm } from "./containers";
 import { loadInventory } from "./load-inventory";

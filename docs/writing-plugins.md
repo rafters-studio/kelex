@@ -8,12 +8,12 @@ This page builds a renderer from nothing, one runnable step at a time. For the l
 
 A renderer is four things: an inventory that maps a field to a component name, the composers that build output for those names, a wrapper for the whole form, and a fallback.
 
-Here is one, complete. Save it as `tiny.mjs` in a project with `kelex` and `zod` installed, then run it.
+Here is one, complete. Save it as `tiny.mjs` in a project with `@rafters/kelex` and `zod` installed, then run it.
 
 ```javascript
 import { z } from "zod/v4";
-import { introspect } from "kelex/introspection";
-import { renderForm } from "kelex/engine";
+import { introspect } from "@rafters/kelex/introspection";
+import { renderForm } from "@rafters/kelex/engine";
 
 const SCALARS = ["string", "number", "boolean", "date", "enum", "literal"];
 const CONTAINERS = ["object", "array", "union", "tuple", "record", "ref"];
@@ -72,7 +72,7 @@ A constrained entry does not count. An entry matching `string` plus a length buc
 Check without rendering:
 
 ```javascript
-import { validateRenderer } from "kelex/engine";
+import { validateRenderer } from "@rafters/kelex/engine";
 console.log(validateRenderer(renderer)); // [] when complete
 ```
 
@@ -160,14 +160,14 @@ export default function createRenderer(options = {}) {
 }
 ```
 
-Declare `kelex` and `zod` as peer dependencies, tag the package with the `kelex-plugin` keyword, and list `inventory.jsonl` in `files` so it ships. The official ones are named `@kelex/plugin-renderer-html` and `@kelex/plugin-handler-post`, so yours would be `@kelex/plugin-renderer-shadcn` or `plugin-handler-zustand`.
+Declare `@rafters/kelex` and `zod` as peer dependencies, tag the package with the `kelex-plugin` keyword, and list `inventory.jsonl` in `files` so it ships. The official ones are named `@rafters/kelex-renderer-html` and `@rafters/kelex-handler-post`, so yours would be `kelex-renderer-shadcn` or `@you/kelex-handler-zustand`.
 
 Then name it in the settings:
 
 ```jsonc
 {
   "renderer": "my-renderer",
-  "handler": "@kelex/plugin-handler-post",
+  "handler": "@rafters/kelex-handler-post",
 }
 ```
 
@@ -188,7 +188,7 @@ It is blind to components on purpose. It reads only the hooks the renderer stamp
 When your server returns Standard Schema issues, match them to controls with `route`:
 
 ```javascript
-import { route } from "kelex/engine";
+import { route } from "@rafters/kelex/engine";
 
 for (const b of route(controls, issues)) {
   if (b.control) markError(b.control, b.message);
@@ -205,7 +205,7 @@ Note that `route` is a real import, not a type. A handler that uses it needs `ke
 kelex cannot test your components. It can test the contract against the whole schema space, which is the part you are most likely to get wrong.
 
 ```javascript
-import { conformance } from "kelex/conformance";
+import { conformance } from "@rafters/kelex/conformance";
 
 const report = await conformance(myRenderer, myHandler, {
   names: (output) => extractNames(output),

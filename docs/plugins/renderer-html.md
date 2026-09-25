@@ -1,16 +1,16 @@
-# @kelex/plugin-renderer-html
+# @rafters/kelex-renderer-html
 
 The default renderer. Classless semantic HTML, zero dependencies, output type `string`.
 
 Constraints on the schema become native validation attributes. Every control carries its path as `name`, which is the join the handler needs. The markup is inert: this plugin adds no behavior at all, and a handler owns every click.
 
 ```sh
-pnpm add @kelex/plugin-renderer-html
+pnpm add @rafters/kelex-renderer-html
 ```
 
 ```jsonc
 {
-  "renderer": "@kelex/plugin-renderer-html",
+  "renderer": "@rafters/kelex-renderer-html",
   "renderer.options": { "action": "/api/submit" },
 }
 ```
@@ -78,7 +78,7 @@ Semantic specials use an explicit tag rather than pattern matching. `z.string().
 Classless, so it inherits whatever your stylesheet says about `input`, `label`, and `fieldset`. An example stylesheet ships with the package:
 
 ```typescript
-import "@kelex/plugin-renderer-html/form.css";
+import "@rafters/kelex-renderer-html/form.css";
 ```
 
 Copy it and restyle rather than depending on it. It is an example, not a design system.

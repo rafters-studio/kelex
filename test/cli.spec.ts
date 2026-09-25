@@ -128,7 +128,7 @@ describe("CLI", () => {
       ]);
 
       expect(result).toContain("Generated");
-      expect(result).toContain("@kelex/plugin-renderer-html + @kelex/plugin-handler-post");
+      expect(result).toContain("@rafters/kelex-renderer-html + @rafters/kelex-handler-post");
       const html = fs.readFileSync(outputPath, "utf-8");
       expect(html.startsWith("<form")).toBe(true);
       expect(html).toContain('action="/fixture-submit"'); // renderer.options from the settings

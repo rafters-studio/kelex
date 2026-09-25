@@ -15,10 +15,10 @@ importers:
         specifier: ^3.3.1
         version: 3.3.1
     devDependencies:
-      '@kelex/plugin-handler-post':
+      '@rafters/kelex-handler-post':
         specifier: workspace:*
         version: link:packages/plugin-handler-post
-      '@kelex/plugin-renderer-html':
+      '@rafters/kelex-renderer-html':
         specifier: workspace:*
         version: link:packages/plugin-renderer-html
       '@types/node':
@@ -51,19 +51,19 @@ importers:
 
   packages/plugin-handler-post:
     devDependencies:
-      '@kelex/plugin-renderer-html':
-        specifier: workspace:*
-        version: link:../plugin-renderer-html
-      kelex:
+      '@rafters/kelex':
         specifier: workspace:*
         version: link:../..
+      '@rafters/kelex-renderer-html':
+        specifier: workspace:*
+        version: link:../plugin-renderer-html
       zod:
         specifier: ^4.4.3
         version: 4.4.3
 
   packages/plugin-renderer-html:
     devDependencies:
-      kelex:
+      '@rafters/kelex':
         specifier: workspace:*
         version: link:../..
       zod:

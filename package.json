@@ -1,5 +1,5 @@
 {
-  "name": "kelex",
+  "name": "@rafters/kelex",
   "version": "0.1.2",
   "description": "Zod schema in, form out — a config-driven form plugin host.",
   "keywords": [
@@ -70,8 +70,8 @@
     "jsonc-parser": "^3.3.1"
   },
   "devDependencies": {
-    "@kelex/plugin-handler-post": "workspace:*",
-    "@kelex/plugin-renderer-html": "workspace:*",
+    "@rafters/kelex-handler-post": "workspace:*",
+    "@rafters/kelex-renderer-html": "workspace:*",
     "@types/node": "^25.0.9",
     "happy-dom": "^20.11.1",
     "lefthook": "^2.0.15",

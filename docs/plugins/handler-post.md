@@ -1,16 +1,16 @@
-# @kelex/plugin-handler-post
+# @rafters/kelex-handler-post
 
 The default handler. Async POST, no framework, output type `string`.
 
 It appends a self-contained script to the rendered form and returns the same string. No dependencies, no build step, no runtime library. It reads only the DOM hooks the renderer stamped, so it works with any renderer that emits HTML strings and stamps paths.
 
 ```sh
-pnpm add @kelex/plugin-handler-post
+pnpm add @rafters/kelex-handler-post
 ```
 
 ```jsonc
 {
-  "handler": "@kelex/plugin-handler-post",
+  "handler": "@rafters/kelex-handler-post",
 }
 ```
 

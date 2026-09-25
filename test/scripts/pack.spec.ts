@@ -9,7 +9,7 @@ import pkg from "../../package.json";
 // manifests inside the tarballs, as npm will (#244). Needs `pnpm build`.
 
 const ROOT = resolve(__dirname, "../..");
-const PLUGINS = ["@kelex/plugin-renderer-html", "@kelex/plugin-handler-post"];
+const PLUGINS = ["@rafters/kelex-renderer-html", "@rafters/kelex-handler-post"];
 let out: string;
 
 const manifestOf = (tarball: string): Record<string, unknown> =>
@@ -31,15 +31,15 @@ afterAll(() => {
 describe("packed plugins, as the release publishes them", () => {
   it("name their tarballs the way the publish step expects", () => {
     expect(readdirSync(out).sort()).toEqual([
-      `kelex-plugin-handler-post-${pkg.version}.tgz`,
-      `kelex-plugin-renderer-html-${pkg.version}.tgz`,
+      `rafters-kelex-handler-post-${pkg.version}.tgz`,
+      `rafters-kelex-renderer-html-${pkg.version}.tgz`,
     ]);
   });
 
-  it("carry a real version range on their kelex peer, not workspace:", () => {
+  it("carry a real version range on their @rafters/kelex peer, not workspace:", () => {
     for (const file of readdirSync(out)) {
       const peers = manifestOf(join(out, file)).peerDependencies as Record<string, string>;
-      expect(peers.kelex, file).toBe(`^${pkg.version}`);
+      expect(peers["@rafters/kelex"], file).toBe(`^${pkg.version}`);
     }
   });
 });

@@ -2,9 +2,9 @@ import { readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";
 import { z } from "zod/v4";
-import { render, validateRenderer } from "kelex/engine";
-import { conformance } from "kelex/conformance";
-import { introspect } from "kelex/introspection";
+import { render, validateRenderer } from "@rafters/kelex/engine";
+import { conformance } from "@rafters/kelex/conformance";
+import { introspect } from "@rafters/kelex/introspection";
 import { createHtmlRenderer, htmlRenderer } from "../src/renderer";
 
 const OPTS = { formName: "F", schemaImportPath: "./f", schemaExportName: "s" };

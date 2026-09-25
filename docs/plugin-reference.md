@@ -2,10 +2,10 @@
 
 Lookup tables for the plugin contract. To build one, start with [writing a plugin](./writing-plugins.md).
 
-Import the types from `kelex/engine`. They are type-only and erase at runtime, except `route` and `validateRenderer`, which are real functions.
+Import the types from `@rafters/kelex/engine`. They are type-only and erase at runtime, except `route` and `validateRenderer`, which are real functions.
 
 ```typescript
-import type { Renderer, Handler, Composer, Input, Entry, Control } from "kelex/engine";
+import type { Renderer, Handler, Composer, Input, Entry, Control } from "@rafters/kelex/engine";
 ```
 
 ## The load contract
@@ -163,4 +163,4 @@ Invariants checked: the floor, totality so nothing reaches `fallback`, path pres
 
 ## Naming
 
-A renderer is named `plugin-renderer-<name>` and a handler `plugin-handler-<name>`, matching `@kelex/plugin-renderer-html` and `@kelex/plugin-handler-post`. Tag yours with the `kelex-plugin` keyword and declare `kelex` and `zod` as peer dependencies.
+A renderer is named `kelex-renderer-<name>` and a handler `kelex-handler-<name>`, matching `@rafters/kelex-renderer-html` and `@rafters/kelex-handler-post`. Tag yours with the `kelex-plugin` keyword and declare `@rafters/kelex` and `zod` as peer dependencies.

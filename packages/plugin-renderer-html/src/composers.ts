@@ -1,4 +1,4 @@
-import type { Composer } from "kelex/engine";
+import type { Composer } from "@rafters/kelex/engine";
 import { attrs, errorSlot, escapeHtml, fieldFrame, hookAttrs, validationAttrs } from "./attrs";
 import { pathToId } from "./path-id";
 
