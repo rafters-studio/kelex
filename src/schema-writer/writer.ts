@@ -12,6 +12,17 @@ import type { EmbeddedSchema, SchemaWriterOptions, SchemaWriterResult } from "./
 export function writeSchema(options: SchemaWriterOptions): SchemaWriterResult {
   const { form, embeddedSchemas } = options;
 
+  // Every declaration in the file needs its own name: two schemas under one
+  // name would emit a duplicate export (and overwrite each other in the sort).
+  const names = [form, ...(embeddedSchemas ?? []).map((s) => s.form)].map(exportNameOf);
+  const clash = names.find((name, i) => names.indexOf(name) !== i);
+  if (clash !== undefined) {
+    throw new Error(
+      `Two schemas share the export name "${clash}". ` +
+        "Give each form a distinct name or schemaExportName.",
+    );
+  }
+
   const lines: string[] = ['import { z } from "zod/v4";', ""];
   const warnings: string[] = [];
 
@@ -120,15 +131,6 @@ function collectSchemaRefs(form: FormDescriptor): Set<string> {
 function topologicalSort(schemas: EmbeddedSchema[]): EmbeddedSchema[] {
   const names = schemas.map((s) => exportNameOf(s.form));
   const nameSet = new Set(names);
-  // Two schemas under one export name would overwrite each other here and emit
-  // one declaration twice; name the clash instead.
-  if (nameSet.size !== names.length) {
-    const clash = names.find((name, i) => names.indexOf(name) !== i);
-    throw new Error(
-      `Two embedded schemas share the export name "${clash}". ` +
-        "Give each form a distinct name or schemaExportName.",
-    );
-  }
 
   // Build lookup tables: each name maps to its schema, adjacency list, and in-degree.
   // All entries are initialized here, so subsequent .get() calls are guaranteed non-undefined.

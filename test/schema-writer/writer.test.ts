@@ -621,5 +621,11 @@ describe("writeSchema", () => {
         });
       expect(run).toThrow(/share the export name "addressSchema"/);
     });
+
+    it("refuses an embedded schema that would share the primary schema's name", () => {
+      const run = () =>
+        writeSchema({ form: named("UserForm"), embeddedSchemas: [{ form: named("User") }] });
+      expect(run).toThrow(/share the export name "userSchema"/);
+    });
   });
 });
