@@ -37,7 +37,7 @@ afterEach(() => {
 
 describe("kelex host — generateForm with the default plugins", () => {
   it("takes a LIVE schema + run options and folds a wired form", async () => {
-    const { output, fields } = await generateForm(signupSchema, {
+    const { output, fields } = await generateForm<string>(signupSchema, {
       settings, // or omit -> loads kelex.settings.jsonc itself
       rendererOptions: { action: "/api/signup" }, // a run-time option, not baked in settings
       from: ROOT,
@@ -54,7 +54,7 @@ describe("kelex host — generateForm with the default plugins", () => {
   });
 
   it("with no handler named, returns the renderer's output unwired (#252)", async () => {
-    const { output } = await generateForm(signupSchema, {
+    const { output } = await generateForm<string>(signupSchema, {
       settings: { renderer: "@kelex/plugin-renderer-html" },
       rendererOptions: { action: "/api/signup" },
       from: ROOT,
@@ -68,9 +68,37 @@ describe("kelex host — generateForm with the default plugins", () => {
     expect(output).not.toContain("<script>");
   });
 
+  it("returns the renderer's output unchanged when it is not a string (#255)", async () => {
+    // A renderer that builds a tree (here, an object wrapping the HTML) must get
+    // that tree back, not "[object Object]".
+    dir = mkdtempSync(join(tmpdir(), "kelex-tree-"));
+    const pkgDir = join(dir, "node_modules", "tree-renderer");
+    mkdirSync(pkgDir, { recursive: true });
+    writeFileSync(join(pkgDir, "package.json"), `{ "name": "tree-renderer", "type": "module" }`);
+    const rendererDist = pathToFileURL(
+      join(ROOT, "packages/plugin-renderer-html/dist/index.js"),
+    ).href;
+    writeFileSync(
+      join(pkgDir, "index.js"),
+      [
+        `import createHtmlRenderer from "${rendererDist}";`,
+        "export default (options) => {",
+        "  const base = createHtmlRenderer(options);",
+        "  return { ...base, form: (children) => ({ tree: base.form(children) }) };",
+        "};",
+      ].join("\n"),
+    );
+    const { output } = await generateForm<{ tree: string }>(signupSchema, {
+      settings: { renderer: "tree-renderer" },
+      from: dir,
+    });
+    expect(typeof output).toBe("object");
+    expect(output.tree.startsWith("<form")).toBe(true);
+  });
+
   it("a run overrides the settings' plugin options", async () => {
     const withDefault: KelexSettings = { ...settings, "renderer.options": { action: "/default" } };
-    const { output } = await generateForm(signupSchema, {
+    const { output } = await generateForm<string>(signupSchema, {
       settings: withDefault,
       rendererOptions: { action: "/override" },
       from: ROOT,
@@ -98,7 +126,7 @@ describe("kelex host — generateForm with the default plugins", () => {
     writeFileSync(p, `{ "renderer": "local-renderer", "handler": "local-handler" }`);
 
     expect(process.cwd()).not.toBe(dir);
-    const { output } = await generateForm(signupSchema, { config: p });
+    const { output } = await generateForm<string>(signupSchema, { config: p });
     expect(output.endsWith("<!-- local -->")).toBe(true);
   });
 
@@ -109,7 +137,7 @@ describe("kelex host — generateForm with the default plugins", () => {
       p,
       `{ "renderer": "@kelex/plugin-renderer-html", "handler": "@kelex/plugin-handler-post" }`,
     );
-    const { output } = await generateForm(signupSchema, { config: p, from: ROOT });
+    const { output } = await generateForm<string>(signupSchema, { config: p, from: ROOT });
     expect(output.startsWith("<form")).toBe(true);
     expect(output).toContain("<script>"); // handler from the loaded config
   });
