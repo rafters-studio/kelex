@@ -141,6 +141,44 @@ describe("loadPlugin -- a factory's result must fit the role it fills (#259)", (
     await expect(run).rejects.toThrow('plugin "half-renderer" returned a renderer without');
   });
 
+  it("says a Map is not the plain object compose must be", async () => {
+    factoryReturning(
+      "map-compose",
+      "{ inventory: [], compose: new Map(), form() {}, fallback() {} }",
+    );
+    await expect(loadPlugin("map-compose", undefined, project, "renderer")).rejects.toThrow(
+      'plugin "map-compose" returned a renderer without a plain object "compose"; got a Map',
+    );
+  });
+
+  it("names null and arrays as themselves, not as object", async () => {
+    factoryReturning("null-compose", "{ inventory: [], compose: null, form() {}, fallback() {} }");
+    await expect(loadPlugin("null-compose", undefined, project, "renderer")).rejects.toThrow(
+      'without a plain object "compose"; got null',
+    );
+    factoryReturning("array-compose", "{ inventory: [], compose: [], form() {}, fallback() {} }");
+    await expect(loadPlugin("array-compose", undefined, project, "renderer")).rejects.toThrow(
+      'without a plain object "compose"; got an array',
+    );
+  });
+
+  it("awaits an async factory before checking what it returns", async () => {
+    installPackage(
+      "async-handler",
+      { type: "module", main: "./index.js" },
+      {
+        "index.js": "export default async () => ({ wire: (form) => form });",
+      },
+    );
+    const handler = await loadPlugin<{ wire: unknown }>(
+      "async-handler",
+      undefined,
+      project,
+      "handler",
+    );
+    expect(typeof handler.wire).toBe("function");
+  });
+
   it("accepts a result with every member its role needs", async () => {
     factoryReturning("ok-handler", "{ wire: (form) => form }");
     const handler = await loadPlugin<{ wire: unknown }>(

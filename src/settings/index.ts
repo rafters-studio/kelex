@@ -5,7 +5,7 @@ import { renderForm } from "../engine";
 import type { Handler, Renderer } from "../engine/types";
 import { introspect } from "../introspection";
 import { factoryOf, messageOf, resolvePlugin } from "./resolve-plugin";
-import type { GenerateOptions, KelexSettings, PluginFactory } from "./types";
+import type { GenerateOptions, KelexSettings } from "./types";
 
 const DEFAULT_SETTINGS = "kelex.settings.jsonc";
 
@@ -92,23 +92,43 @@ const PLUGIN_SHAPES = {
 
 export type PluginRole = keyof typeof PLUGIN_SHAPES;
 
+// A plain object: the engine reads members by key, so a Map or a class instance
+// with the right entries still fails there.
+const isPlainObject = (value: unknown): boolean => {
+  if (typeof value !== "object" || value === null) return false;
+  const proto: unknown = Object.getPrototypeOf(value);
+  return proto === Object.prototype || proto === null;
+};
+
 const isKind = (value: unknown, kind: MemberKind): boolean =>
   kind === "array"
     ? Array.isArray(value)
     : kind === "object"
-      ? typeof value === "object" && value !== null && !Array.isArray(value)
+      ? isPlainObject(value)
       : typeof value === "function";
+
+/** What a value is, in words: null and arrays are named, not reported as "object". */
+const describe = (value: unknown): string =>
+  value === null
+    ? "null"
+    : Array.isArray(value)
+      ? "an array"
+      : value instanceof Map
+        ? "a Map"
+        : typeof value;
 
 /** What is wrong with a factory's result for its role, or undefined if nothing. */
 function shapeProblem(plugin: unknown, role: PluginRole): string | undefined {
   if (typeof plugin !== "object" || plugin === null) {
-    return `returned ${plugin === null ? "null" : typeof plugin}, not a ${role} object`;
+    return `returned ${describe(plugin)}, not a ${role} object`;
   }
   const members = plugin as Record<string, unknown>;
   for (const [key, kind] of PLUGIN_SHAPES[role]) {
     if (!isKind(members[key], kind)) {
-      const found = members[key] === undefined ? "it is missing" : `got ${typeof members[key]}`;
-      return `returned a ${role} without ${kind === "array" ? "an" : "a"} ${kind} "${key}"; ${found}`;
+      const found = members[key] === undefined ? "it is missing" : `got ${describe(members[key])}`;
+      const wanted =
+        kind === "function" ? "a function" : kind === "array" ? "an array" : "a plain object";
+      return `returned a ${role} without ${wanted} "${key}"; ${found}`;
     }
   }
   return undefined;
@@ -140,10 +160,13 @@ export async function loadPlugin<T>(
   if (typeof factory !== "function") {
     throw new Error(`plugin "${pkg}" must default-export a factory: (options) => plugin`);
   }
-  const plugin = (factory as PluginFactory<T>)(options);
+  // A factory may be async; await it so its result, not a Promise, is checked.
+  const plugin: unknown = await (factory as (options?: Record<string, unknown>) => unknown)(
+    options,
+  );
   const problem = role ? shapeProblem(plugin, role) : undefined;
   if (problem) throw new Error(`plugin "${pkg}" ${problem}`);
-  return plugin;
+  return plugin as T;
 }
 
 export interface FormResult {
