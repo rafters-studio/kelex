@@ -134,6 +134,10 @@ A union is exclusive. One variant is live and the rest must be hidden and disabl
 
 The default HTML renderer solves this with a `<select data-variant-of>` plus panels marked `data-variant` and `data-when`, and the handler disables the inactive ones. Read `packages/plugin-renderer-html/src/containers.ts` before you write your own.
 
+## Use the label with care
+
+`i.field.label` is the field's `meta.title` when the schema author set one, and otherwise a label kelex derived from the key (`displayName` becomes `Display Name`). `i.field.meta?.title !== undefined` tells you which. An authored label is a decision; render it as written. A derived label is a guess; replace it if your renderer has a better one. [Schemas](./schemas.md#labels-authored-or-derived) has more.
+
 ## Stamp the path
 
 The `key` on every input is the field's canonical path: `email`, `tags.*.label`, `address.city`. The `*` marks a template slot in a repeater.
