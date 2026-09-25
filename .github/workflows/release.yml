@@ -9,7 +9,7 @@ on:
 permissions: {}
 
 concurrency:
-  group: release-${{ github.ref_name }}
+  group: release
   cancel-in-progress: false
 
 jobs:
@@ -27,7 +27,8 @@ jobs:
         with:
           version: 11.13.0
 
-      # Node 24 ships npm 11.6+, which publishes over OIDC trusted publishing.
+      # node-version 24 resolves to the latest 24.x, whose npm is well above 11.5.1,
+      # the first to publish over OIDC trusted publishing.
       # No registry-url: that writes an .npmrc expecting NODE_AUTH_TOKEN, which
       # trusted publishing does not use. This matches rafters' release workflow.
       - name: Setup Node.js

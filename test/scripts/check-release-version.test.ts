@@ -1,6 +1,7 @@
-import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { execFileSync } from "node:child_process";
+import { mkdirSync, mkdtempSync, rmSync, symlinkSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
-import { join } from "node:path";
+import { join, resolve } from "node:path";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { PACKAGES, releaseProblems } from "../../scripts/check-release-version.mjs";
 
@@ -52,5 +53,32 @@ describe("the release version guard (#244)", () => {
       "packages/plugin-renderer-html",
       "packages/plugin-handler-post",
     ]);
+  });
+
+  // The entry-point check once failed open through a symlink: run the script as a
+  // process, directly and through a link, and require a non-zero exit on a bad tag.
+  describe("run as a script", () => {
+    const script = resolve(__dirname, "../../scripts/check-release-version.mjs");
+    const exitCode = (path: string, tag: string): number => {
+      try {
+        execFileSync("node", [path, tag], { cwd: root, stdio: "pipe" });
+        return 0;
+      } catch (error) {
+        return (error as { status: number }).status;
+      }
+    };
+
+    it("exits 0 on a matching tag and 1 on a mismatch", () => {
+      packagesAt(["0.2.0", "0.2.0", "0.2.0"]);
+      expect(exitCode(script, "v0.2.0")).toBe(0);
+      expect(exitCode(script, "v9.9.9")).toBe(1);
+    });
+
+    it("still checks, and fails a mismatch, when run through a symlink", () => {
+      packagesAt(["0.2.0", "0.2.0", "0.2.0"]);
+      const link = join(root, "check.mjs");
+      symlinkSync(script, link);
+      expect(exitCode(link, "v9.9.9")).toBe(1);
+    });
   });
 });
