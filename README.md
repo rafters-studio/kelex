@@ -71,6 +71,8 @@ The settings file names the plugins. That is all it holds.
 }
 ```
 
+Only `renderer` is required. Leave `handler` out and you get the renderer's markup with no script, ready to serve as static HTML.
+
 The schema, the output path, and per-run options are arguments, not config. Nothing about a particular form belongs in this file.
 
 ## Or run it in code

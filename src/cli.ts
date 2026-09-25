@@ -107,7 +107,7 @@ async function runForm(schemaPath: string, options: FormCommandOptions): Promise
   const outPath = options.out ?? deriveOutputPath(schemaPath, ".html");
   writeForm(outPath, output);
   console.log(`✓ Generated ${path.resolve(outPath)}`);
-  console.log(`  renderer: ${settings.renderer} + ${settings.handler}`);
+  console.log(`  renderer: ${settings.renderer} + ${settings.handler ?? "no handler (unwired)"}`);
   console.log(`  ${fields.length} fields: ${fields.join(", ")}`);
 }
 

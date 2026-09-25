@@ -33,8 +33,13 @@ export const RUNTIME = `(function () {
   function init(form) {
   // Mirrors kelex pathToId -- injective escape so a re-indexed row id stays unique.
   function pathToId(p) {
-    return p.replace(/[_.*-]/g, function (c) {
-      return { "_": "__", ".": "_d", "*": "_x", "-": "_h" }[c];
+    if (p === "") return "_e";
+    return p.replace(/[^A-Za-z0-9]/gu, function (c) {
+      if (c === "_") return "__";
+      if (c === ".") return "_d";
+      if (c === "*") return "_x";
+      if (c === "-") return "_h";
+      return "_u" + c.codePointAt(0).toString(16) + "_";
     });
   }
 
@@ -104,12 +109,18 @@ export const RUNTIME = `(function () {
   });
 
   // --- collect by name (= path) -> nested JSON; compact arrays to close gaps ---
+  // Objects are built with no prototype and read by own property only, so a key
+  // like "constructor" or "__proto__" is plain data: it never reaches (or
+  // pollutes) Object.prototype, and a field with that name keeps its value.
+  var own = Object.prototype.hasOwnProperty;
   function assign(root, segs, value) {
     var cur = root;
     for (var i = 0; i < segs.length - 1; i++) {
       var key = segs[i];
       var nextIsIndex = /^\\d+$/.test(segs[i + 1]);
-      if (cur[key] == null) cur[key] = nextIsIndex ? [] : {};
+      if (!own.call(cur, key) || cur[key] == null) {
+        cur[key] = nextIsIndex ? [] : Object.create(null);
+      }
       cur = cur[key];
     }
     cur[segs[segs.length - 1]] = value;
@@ -130,7 +141,7 @@ export const RUNTIME = `(function () {
   // A blank non-checkbox is omitted (an optional field stays undefined); a date
   // stays a string (JSON has no Date -- the server needs z.coerce.date).
   function collect() {
-    var out = {};
+    var out = Object.create(null);
     form.querySelectorAll("[name]").forEach(function (el) {
       if (el.disabled) return;
       var name = el.getAttribute("name");

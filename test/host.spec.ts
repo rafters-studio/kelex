@@ -4,6 +4,9 @@ import { join, resolve } from "node:path";
 import { pathToFileURL } from "node:url";
 import { afterEach, describe, expect, it } from "vitest";
 import { z } from "zod/v4";
+import { createHtmlRenderer } from "@kelex/plugin-renderer-html";
+import { renderForm } from "../src/engine";
+import { introspect } from "../src/introspection";
 import { generateForm } from "../src";
 import type { KelexSettings } from "../src";
 
@@ -48,6 +51,21 @@ describe("kelex host — generateForm with the default plugins", () => {
     expect(output).toContain('name="email"');
     expect(output).toContain('name="acceptTerms"');
     expect(fields).toEqual(["email", "displayName", "plan", "acceptTerms"]);
+  });
+
+  it("with no handler named, returns the renderer's output unwired (#252)", async () => {
+    const { output } = await generateForm(signupSchema, {
+      settings: { renderer: "@kelex/plugin-renderer-html" },
+      rendererOptions: { action: "/api/signup" },
+      from: ROOT,
+    });
+    const descriptor = introspect(signupSchema, {
+      formName: "Form",
+      schemaImportPath: "./schema",
+      schemaExportName: "schema",
+    });
+    expect(output).toBe(renderForm(descriptor, createHtmlRenderer({ action: "/api/signup" })));
+    expect(output).not.toContain("<script>");
   });
 
   it("a run overrides the settings' plugin options", async () => {
