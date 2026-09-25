@@ -1,6 +1,7 @@
-import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
+import { pathToFileURL } from "node:url";
 import { afterEach, describe, expect, it } from "vitest";
 import { z } from "zod/v4";
 import { generateForm } from "../src";
@@ -58,6 +59,29 @@ describe("kelex host — generateForm with the default plugins", () => {
     });
     expect(output).toContain('action="/override"');
     expect(output).not.toContain('action="/default"');
+  });
+
+  it("resolves plugins next to the settings file when no from is given", async () => {
+    // The plugins exist only in the temp project, never under the working
+    // directory, so the load succeeds only if resolution starts at the settings.
+    dir = mkdtempSync(join(tmpdir(), "kelex-from-"));
+    const rendererDist = pathToFileURL(
+      join(ROOT, "packages/plugin-renderer-html/dist/index.js"),
+    ).href;
+    const install = (name: string, source: string) => {
+      const pkgDir = join(dir as string, "node_modules", name);
+      mkdirSync(pkgDir, { recursive: true });
+      writeFileSync(join(pkgDir, "package.json"), JSON.stringify({ name, type: "module" }));
+      writeFileSync(join(pkgDir, "index.js"), source);
+    };
+    install("local-renderer", `export { default } from "${rendererDist}";`);
+    install("local-handler", `export default () => ({ wire: (form) => form + "<!-- local -->" });`);
+    const p = join(dir, "kelex.settings.jsonc");
+    writeFileSync(p, `{ "renderer": "local-renderer", "handler": "local-handler" }`);
+
+    expect(process.cwd()).not.toBe(dir);
+    const { output } = await generateForm(signupSchema, { config: p });
+    expect(output.endsWith("<!-- local -->")).toBe(true);
   });
 
   it("loads settings from a config file when none is passed", async () => {

@@ -4,7 +4,7 @@ import { type ParseError, parse as parseJsonc, printParseErrorCode } from "jsonc
 import { renderForm } from "../engine";
 import type { Handler, Renderer } from "../engine/types";
 import { introspect } from "../introspection";
-import { factoryOf, resolvePlugin } from "./resolve-plugin";
+import { factoryOf, messageOf, resolvePlugin } from "./resolve-plugin";
 import type { GenerateOptions, KelexSettings, PluginFactory } from "./types";
 
 const DEFAULT_SETTINGS = "kelex.settings.jsonc";
@@ -46,7 +46,15 @@ export async function loadPlugin<T>(
   options: Record<string, unknown> | undefined,
   from: string,
 ): Promise<T> {
-  const mod: { default?: unknown } = await import(resolvePlugin(pkg, from));
+  const url = resolvePlugin(pkg, from);
+  let mod: { default?: unknown };
+  try {
+    mod = await import(url);
+  } catch (error) {
+    throw new Error(`cannot load plugin "${pkg}" from ${url}: ${messageOf(error)}`, {
+      cause: error,
+    });
+  }
   const factory = factoryOf(mod);
   if (typeof factory !== "function") {
     throw new Error(`plugin "${pkg}" must default-export a factory: (options) => plugin`);

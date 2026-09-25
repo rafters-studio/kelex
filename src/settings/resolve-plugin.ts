@@ -1,18 +1,23 @@
 import { readFileSync } from "node:fs";
-import { findPackageJSON } from "node:module";
+import { createRequire, findPackageJSON } from "node:module";
 import { dirname, join, resolve } from "node:path";
 import { pathToFileURL } from "node:url";
 
-// The export conditions an ESM `import()` honors, in the order kelex tries them.
-// `require` comes last: `import()` loads CommonJS too, so a require-only
-// package still loads.
-const CONDITIONS = ["import", "node", "default", "require"] as const;
+// The conditions active for a Node `import()`. As in Node, a condition map is
+// read in the package's own key order and the first active key wins.
+const ACTIVE = new Set(["import", "node", "default"]);
+// Not active for `import()`, but `import()` loads CommonJS too, so a package
+// that exports only a `require` target still loads through it.
+const FALLBACK = "require";
+
+// A package name: `name` or `@scope/name`, with no subpath and no file path.
+const PACKAGE_NAME = /^(?:@[^/\\\s]+\/)?[^/\\\s.][^/\\\s]*$/;
 
 /**
  * Pick the file an `exports` value points at for an `import()`: a string is the
  * target; an array is tried in order; an object is either a subpath map (keys
- * start with ".", so take ".") or a condition map (take the first condition
- * kelex honors). Returns undefined when nothing applies.
+ * start with ".", so take ".") or a condition map (the first active condition
+ * in key order, else `require`). Returns undefined when nothing applies.
  */
 export function exportTarget(value: unknown): string | undefined {
   if (typeof value === "string") return value;
@@ -25,12 +30,11 @@ export function exportTarget(value: unknown): string | undefined {
   }
   if (typeof value !== "object" || value === null) return undefined;
   const map = value as Record<string, unknown>;
-  if (Object.keys(map).some((k) => k.startsWith("."))) return exportTarget(map["."]);
-  for (const condition of CONDITIONS) {
-    if (condition in map) {
-      const target = exportTarget(map[condition]);
-      if (target !== undefined) return target;
-    }
+  const keys = Object.keys(map);
+  if (keys.some((k) => k.startsWith("."))) return exportTarget(map["."]);
+  for (const key of [...keys.filter((k) => ACTIVE.has(k)), ...keys.filter((k) => k === FALLBACK)]) {
+    const target = exportTarget(map[key]);
+    if (target !== undefined) return target;
   }
   return undefined;
 }
@@ -42,6 +46,9 @@ export function exportTarget(value: unknown): string | undefined {
  * "require" or "default").
  */
 export function resolvePlugin(pkg: string, from: string): string {
+  if (!PACKAGE_NAME.test(pkg)) {
+    throw new Error(`plugin "${pkg}" must be a package name (name or @scope/name), not a path`);
+  }
   let manifestPath: string | undefined;
   try {
     manifestPath = findPackageJSON(pkg, pathToFileURL(join(resolve(from), "_")).href);
@@ -55,16 +62,24 @@ export function resolvePlugin(pkg: string, from: string): string {
   }
   const manifest: unknown = JSON.parse(readFileSync(manifestPath, "utf8"));
   const fields = typeof manifest === "object" && manifest !== null ? manifest : {};
-  const target =
-    "exports" in fields
-      ? exportTarget(fields.exports)
-      : "main" in fields && typeof fields.main === "string"
-        ? fields.main
-        : "index.js";
-  if (target === undefined) {
-    throw new Error(`plugin "${pkg}" exports no "." entry that import() can load`);
+  if ("exports" in fields) {
+    const target = exportTarget(fields.exports);
+    if (target === undefined) {
+      throw new Error(`plugin "${pkg}" exports no "." entry that import() can load`);
+    }
+    // An exports target is an exact file, as Node requires.
+    return pathToFileURL(join(dirname(manifestPath), target)).href;
   }
-  return pathToFileURL(join(dirname(manifestPath), target)).href;
+  // `main` predates exports and gets Node's CommonJS lookup: an omitted ".js",
+  // a directory holding index.js, or index.js when there is no main at all.
+  const main = "main" in fields && typeof fields.main === "string" ? fields.main : ".";
+  try {
+    return pathToFileURL(createRequire(manifestPath).resolve(`./${main}`)).href;
+  } catch (error) {
+    throw new Error(`plugin "${pkg}" has no loadable main "${main}": ${messageOf(error)}`, {
+      cause: error,
+    });
+  }
 }
 
 /**
@@ -79,6 +94,6 @@ export function factoryOf(mod: { default?: unknown }): unknown {
   return first;
 }
 
-function messageOf(error: unknown): string {
+export function messageOf(error: unknown): string {
   return error instanceof Error ? error.message : String(error);
 }
