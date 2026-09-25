@@ -1,22 +1,19 @@
 name: Release
 
+# A vX.Y.Z tag publishes kelex and both default plugins at that version, with
+# npm provenance, and cuts a GitHub Release. The three packages release together.
 on:
   push:
-    branches: [main]
+    tags: ["v*"]
 
-concurrency:
-  group: ${{ github.workflow }}-${{ github.ref }}
-  cancel-in-progress: true
+permissions: {}
 
 jobs:
-  version:
-    name: Version
+  release:
     runs-on: ubuntu-latest
     permissions:
-      contents: write
-      pull-requests: write
-    outputs:
-      hasChangesets: ${{ steps.changesets.outputs.hasChangesets }}
+      contents: write # the GitHub Release
+      id-token: write # npm trusted publishing and provenance
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -31,44 +28,15 @@ jobs:
         with:
           node-version: 24
           cache: pnpm
-
-      - name: Install dependencies
-        run: pnpm install --frozen-lockfile
-
-      - name: Create release PR or detect merged version
-        id: changesets
-        uses: changesets/action@v1
-        with:
-          title: "chore: version packages"
-          commit: "chore: version packages"
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
-  publish:
-    name: Publish
-    needs: version
-    if: needs.version.outputs.hasChangesets == 'false'
-    runs-on: ubuntu-latest
-    permissions:
-      contents: read
-      id-token: write
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      - name: Setup pnpm
-        uses: pnpm/action-setup@v4
-        with:
-          version: 11.13.0
-
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: 24
           registry-url: "https://registry.npmjs.org"
 
-      - name: Install latest npm (>=11.5.1 for OIDC)
+      - name: Install npm with trusted publishing (>= 11.5.1)
         run: npm install -g npm@latest
+
+      - name: Check the tag matches every package version
+        env:
+          TAG: ${{ github.ref_name }}
+        run: node scripts/check-release-version.mjs "$TAG"
 
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
@@ -76,8 +44,33 @@ jobs:
       - name: Build
         run: pnpm build
 
+      - name: Type check
+        run: pnpm typecheck
+
       - name: Test (full suite including specs)
         run: pnpm test:all
 
+      # pnpm pack rewrites the plugins' workspace:^ peer range on kelex to the
+      # real version; npm publish then publishes the packed tarballs.
+      - name: Pack
+        run: |
+          mkdir -p .release
+          pnpm pack --pack-destination "$PWD/.release"
+          pnpm --filter @kelex/plugin-renderer-html pack --pack-destination "$PWD/.release"
+          pnpm --filter @kelex/plugin-handler-post pack --pack-destination "$PWD/.release"
+
+      # kelex first: the plugins declare it as a peer.
       - name: Publish to npm
-        run: npm publish --access public
+        env:
+          TAG: ${{ github.ref_name }}
+        run: |
+          version="${TAG#v}"
+          for name in kelex kelex-plugin-renderer-html kelex-plugin-handler-post; do
+            npm publish ".release/${name}-${version}.tgz" --access public --provenance
+          done
+
+      - name: Create the GitHub Release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ github.ref_name }}
+        run: gh release create "$TAG" --generate-notes

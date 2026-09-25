@@ -7,6 +7,6 @@ Library + CLI. Stateless: write files and exit.
 - Tests live in `test/` mirroring `src/`, never colocated. `*.test.ts` unit, `*.spec.ts` integration (require `pnpm build` first).
 - `pnpm preflight` before commits, `pnpm flightcheck` before PRs.
 - oxlint + oxfmt for lint/format, tsdown for builds, TypeScript 7, vitest 4.
-- Changesets for versioning. Targets register in `src/targets/registry.ts`.
+- Releases are tag-driven: bump all three package versions together, note the change in CHANGELOG.md, and push a `vX.Y.Z` tag. Targets register in `src/targets/registry.ts`.
 
 Identity, operating contract, and project memory come from legion (`legion whoami`, `legion whatami`, `legion recall --repo kelex`), not this file.
