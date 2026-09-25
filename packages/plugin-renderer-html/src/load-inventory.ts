@@ -1,7 +1,7 @@
 import { readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
-import type { Entry } from "kelex/engine";
+import type { Entry } from "@rafters/kelex/engine";
 
 // The module's own directory as a filesystem path. `import.meta.dirname` (Node
 // 20.11+) avoids the URL scheme, which some bundlers/test runners rewrite away

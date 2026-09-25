@@ -4,7 +4,7 @@ import { join, resolve } from "node:path";
 import { pathToFileURL } from "node:url";
 import { afterEach, describe, expect, it } from "vitest";
 import { z } from "zod/v4";
-import { createHtmlRenderer } from "@kelex/plugin-renderer-html";
+import { createHtmlRenderer } from "@rafters/kelex-renderer-html";
 import { renderForm } from "../src/engine";
 import { introspect } from "../src/introspection";
 import { generateForm } from "../src";
@@ -22,8 +22,8 @@ const signupSchema = z.object({
 });
 
 const settings: KelexSettings = {
-  renderer: "@kelex/plugin-renderer-html",
-  handler: "@kelex/plugin-handler-post",
+  renderer: "@rafters/kelex-renderer-html",
+  handler: "@rafters/kelex-handler-post",
 };
 
 // The repo root, where the default plugins are installed as workspace packages.
@@ -55,7 +55,7 @@ describe("kelex host — generateForm with the default plugins", () => {
 
   it("with no handler named, returns the renderer's output unwired (#252)", async () => {
     const { output } = await generateForm<string>(signupSchema, {
-      settings: { renderer: "@kelex/plugin-renderer-html" },
+      settings: { renderer: "@rafters/kelex-renderer-html" },
       rendererOptions: { action: "/api/signup" },
       from: ROOT,
     });
@@ -135,7 +135,7 @@ describe("kelex host — generateForm with the default plugins", () => {
     const p = join(dir, "kelex.settings.jsonc");
     writeFileSync(
       p,
-      `{ "renderer": "@kelex/plugin-renderer-html", "handler": "@kelex/plugin-handler-post" }`,
+      `{ "renderer": "@rafters/kelex-renderer-html", "handler": "@rafters/kelex-handler-post" }`,
     );
     const { output } = await generateForm<string>(signupSchema, { config: p, from: ROOT });
     expect(output.startsWith("<form")).toBe(true);

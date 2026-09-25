@@ -5,7 +5,7 @@ You already wrote the schema. This walks through pointing kelex at it and gettin
 ## Install
 
 ```sh
-pnpm add kelex @kelex/plugin-renderer-html @kelex/plugin-handler-post zod
+pnpm add @rafters/kelex @rafters/kelex-renderer-html @rafters/kelex-handler-post zod
 ```
 
 Three packages: the host, a renderer, a handler. The host has no opinion about the last two; it loads whichever ones your settings name.
@@ -22,8 +22,8 @@ Put a `kelex.settings.jsonc` in your project root:
 {
   // Which plugins to load. Only the renderer is required; without a handler
   // the form is plain markup with no script.
-  "renderer": "@kelex/plugin-renderer-html",
-  "handler": "@kelex/plugin-handler-post",
+  "renderer": "@rafters/kelex-renderer-html",
+  "handler": "@rafters/kelex-handler-post",
 
   // Optional: defaults for the plugins. A run can override them.
   "renderer.options": { "action": "/api/submit" },
@@ -55,7 +55,7 @@ Run it:
 ```sh
 $ kelex form ./signup.ts -e signupSchema -o signup.html -a /api/signup
 ✓ Generated signup.html
-  renderer: @kelex/plugin-renderer-html + @kelex/plugin-handler-post
+  renderer: @rafters/kelex-renderer-html + @rafters/kelex-handler-post
   4 fields: email, displayName, plan, acceptTerms
 ```
 
@@ -122,7 +122,7 @@ Same thing without the CLI. Pass the live schema; kelex loads the settings and t
 
 ```typescript
 import { z } from "zod/v4";
-import { generateForm, writeForm } from "kelex";
+import { generateForm, writeForm } from "@rafters/kelex";
 
 const schema = z.object({ email: z.email(), name: z.string().min(2) });
 
@@ -138,12 +138,12 @@ This path needs Node. It reads a file and resolves packages off disk.
 
 ## Drive it from a browser
 
-Skip the host and call the engine. `kelex/introspection` and `kelex/engine` import nothing from Node, so they run wherever Zod runs.
+Skip the host and call the engine. `@rafters/kelex/introspection` and `@rafters/kelex/engine` import nothing from Node, so they run wherever Zod runs.
 
 ```typescript
 import { z } from "zod/v4";
-import { introspect } from "kelex/introspection";
-import { renderForm } from "kelex/engine";
+import { introspect } from "@rafters/kelex/introspection";
+import { renderForm } from "@rafters/kelex/engine";
 
 const schema = z.object({ email: z.email(), name: z.string().min(2) });
 
@@ -180,7 +180,7 @@ Numbers and booleans round-trip as JSON numbers and booleans. A `z.date()` posts
 The default renderer is classless. It ships an example stylesheet you can use or replace:
 
 ```typescript
-import "@kelex/plugin-renderer-html/form.css";
+import "@rafters/kelex-renderer-html/form.css";
 ```
 
 ## Next

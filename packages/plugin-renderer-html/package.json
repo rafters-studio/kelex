@@ -1,5 +1,5 @@
 {
-  "name": "@kelex/plugin-renderer-html",
+  "name": "@rafters/kelex-renderer-html",
   "version": "0.1.2",
   "description": "Default base-HTML renderer plugin for kelex — classless, zero-dependency.",
   "keywords": [
@@ -40,11 +40,11 @@
     "prepublishOnly": "pnpm build"
   },
   "devDependencies": {
-    "kelex": "workspace:*",
+    "@rafters/kelex": "workspace:*",
     "zod": "^4.4.3"
   },
   "peerDependencies": {
-    "kelex": "workspace:^",
+    "@rafters/kelex": "workspace:^",
     "zod": "^4.0.0"
   }
 }

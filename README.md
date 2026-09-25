@@ -26,7 +26,7 @@ One command:
 ```sh
 $ kelex form ./signup.ts -e signupSchema -o signup.html -a /api/signup
 ✓ Generated signup.html
-  renderer: @kelex/plugin-renderer-html + @kelex/plugin-handler-post
+  renderer: @rafters/kelex-renderer-html + @rafters/kelex-handler-post
   4 fields: email, displayName, plan, acceptTerms
 ```
 
@@ -55,7 +55,7 @@ kelex read all of that off the schema. It added nothing.
 ## Install
 
 ```sh
-pnpm add kelex @kelex/plugin-renderer-html @kelex/plugin-handler-post zod
+pnpm add @rafters/kelex @rafters/kelex-renderer-html @rafters/kelex-handler-post zod
 ```
 
 Zod 4 is a peer dependency, because kelex reads your live schema graph rather than your source text. Node 24 or newer.
@@ -66,8 +66,8 @@ The settings file names the plugins. That is all it holds.
 
 ```jsonc
 {
-  "renderer": "@kelex/plugin-renderer-html",
-  "handler": "@kelex/plugin-handler-post",
+  "renderer": "@rafters/kelex-renderer-html",
+  "handler": "@rafters/kelex-handler-post",
 }
 ```
 
@@ -82,7 +82,7 @@ The CLI is one way in. There are two others.
 On Node, `generateForm` does what the CLI does. It reads the settings file, resolves the plugins, and hands back the output.
 
 ```typescript
-import { generateForm, writeForm } from "kelex";
+import { generateForm, writeForm } from "@rafters/kelex";
 
 const { output } = await generateForm<string>(schema, {
   rendererOptions: { action: "/api/signup" },
@@ -90,11 +90,11 @@ const { output } = await generateForm<string>(schema, {
 writeForm("signup.html", output);
 ```
 
-In a browser, skip the settings file and call the engine directly. `kelex/introspection` and `kelex/engine` import nothing from Node, so they run wherever Zod runs.
+In a browser, skip the settings file and call the engine directly. `@rafters/kelex/introspection` and `@rafters/kelex/engine` import nothing from Node, so they run wherever Zod runs.
 
 ```typescript
-import { introspect } from "kelex/introspection";
-import { renderForm } from "kelex/engine";
+import { introspect } from "@rafters/kelex/introspection";
+import { renderForm } from "@rafters/kelex/engine";
 
 const html = renderForm(introspect(schema, { formName: "Signup" }), renderer, handler);
 document.querySelector("#mount").innerHTML = html;
@@ -122,9 +122,9 @@ One thing: nothing gets dropped. Before rendering, `renderForm` checks that your
 Everything else is your call. kelex cannot test your components, so it tests the contract against the schema space instead:
 
 ```typescript
-import { conformance } from "kelex/conformance";
-import createRenderer from "@kelex/plugin-renderer-html";
-import createHandler from "@kelex/plugin-handler-post";
+import { conformance } from "@rafters/kelex/conformance";
+import createRenderer from "@rafters/kelex-renderer-html";
+import createHandler from "@rafters/kelex-handler-post";
 
 const report = await conformance(createRenderer(), createHandler(), {
   names: (html) => [...html.matchAll(/name="([^"]+)"/g)].map((m) => m[1]),
@@ -172,15 +172,15 @@ Field order is preserved. Anything the reader cannot represent is reported as a 
 
 ## Packages
 
-| package                                                          | what it is                                          |
-| ---------------------------------------------------------------- | --------------------------------------------------- |
-| `kelex`                                                          | the host: introspection, engine, settings, CLI      |
-| [`@kelex/plugin-renderer-html`](./docs/plugins/renderer-html.md) | default renderer, classless HTML, zero dependencies |
-| [`@kelex/plugin-handler-post`](./docs/plugins/handler-post.md)   | default handler, async POST, no framework           |
+| package                                                           | what it is                                          |
+| ----------------------------------------------------------------- | --------------------------------------------------- |
+| `@rafters/kelex`                                                  | the host: introspection, engine, settings, CLI      |
+| [`@rafters/kelex-renderer-html`](./docs/plugins/renderer-html.md) | default renderer, classless HTML, zero dependencies |
+| [`@rafters/kelex-handler-post`](./docs/plugins/handler-post.md)   | default handler, async POST, no framework           |
 
 Renderers for rafters and shadcn are planned, as are handlers for nanostores, zustand, TanStack Form, and React Hook Form. The [catalog](./docs/plugins/index.md) tracks what ships and what does not.
 
-Entry points are explicit: `kelex/engine`, `kelex/introspection`, `kelex/conformance`, `kelex/targets`, `kelex/schema-writer`. Plugins depend on the public contract and nothing else.
+Entry points are explicit: `@rafters/kelex/engine`, `@rafters/kelex/introspection`, `@rafters/kelex/conformance`, `@rafters/kelex/targets`, `@rafters/kelex/schema-writer`. Plugins depend on the public contract and nothing else.
 
 ## Docs
 

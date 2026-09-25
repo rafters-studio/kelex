@@ -11,8 +11,8 @@ const rendererSrc = fileURLToPath(
 export default defineConfig({
   resolve: {
     alias: [
-      { find: /^kelex\/(.*)$/, replacement: `${kelexSrc}/$1/index.ts` },
-      { find: /^@kelex\/plugin-renderer-html$/, replacement: rendererSrc },
+      { find: /^@rafters\/kelex\/(.*)$/, replacement: `${kelexSrc}/$1/index.ts` },
+      { find: /^@rafters\/kelex-renderer-html$/, replacement: rendererSrc },
     ],
   },
   test: {

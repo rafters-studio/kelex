@@ -1,10 +1,10 @@
 // @vitest-environment happy-dom
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { z } from "zod/v4";
-import { renderForm } from "kelex/engine";
-import { conformance } from "kelex/conformance";
-import { introspect } from "kelex/introspection";
-import { htmlRenderer, pathToId } from "@kelex/plugin-renderer-html";
+import { renderForm } from "@rafters/kelex/engine";
+import { conformance } from "@rafters/kelex/conformance";
+import { introspect } from "@rafters/kelex/introspection";
+import { htmlRenderer, pathToId } from "@rafters/kelex-renderer-html";
 import { postHandler } from "../src/handler";
 
 const OPTS = { formName: "F", schemaImportPath: "./f", schemaExportName: "s" };

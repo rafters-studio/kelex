@@ -25,12 +25,12 @@ describe("loadSettings", () => {
     const loaded = loadSettings(
       settingsFile(`{
         // the only required settings: which plugins to load
-        "renderer": "@kelex/plugin-renderer-html",
-        "handler": "@kelex/plugin-handler-post", // trailing comma is fine:
+        "renderer": "@rafters/kelex-renderer-html",
+        "handler": "@rafters/kelex-handler-post", // trailing comma is fine:
       }`),
     );
-    expect(loaded.renderer).toBe("@kelex/plugin-renderer-html");
-    expect(loaded.handler).toBe("@kelex/plugin-handler-post");
+    expect(loaded.renderer).toBe("@rafters/kelex-renderer-html");
+    expect(loaded.handler).toBe("@rafters/kelex-handler-post");
   });
 
   it("reads a file saved with a UTF-8 byte-order mark", () => {
@@ -44,8 +44,8 @@ describe("loadSettings", () => {
   });
 
   it("loads settings that name only a renderer (#252)", () => {
-    const loaded = loadSettings(settingsFile(`{ "renderer": "@kelex/plugin-renderer-html" }`));
-    expect(loaded).toEqual({ renderer: "@kelex/plugin-renderer-html" });
+    const loaded = loadSettings(settingsFile(`{ "renderer": "@rafters/kelex-renderer-html" }`));
+    expect(loaded).toEqual({ renderer: "@rafters/kelex-renderer-html" });
   });
 
   it("names the missing renderer, not both keys, when neither is given (#252)", () => {

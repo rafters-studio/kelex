@@ -3,8 +3,8 @@ import { renderForm, validateRenderer } from "../../src/engine";
 import { controlPaths } from "../../src/engine/paths";
 import type { FieldConstraints, FieldType } from "../../src/introspection";
 import { introspect } from "../../src/introspection";
-import { postHandler } from "@kelex/plugin-handler-post";
-import { htmlRenderer } from "@kelex/plugin-renderer-html";
+import { postHandler } from "@rafters/kelex-handler-post";
+import { htmlRenderer } from "@rafters/kelex-renderer-html";
 import { writeSchema } from "../../src/schema-writer";
 import { evaluateSchemaCode } from "../helpers/evaluate-schema";
 

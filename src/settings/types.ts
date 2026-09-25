@@ -4,10 +4,10 @@
  * runtime. Like any plugin system, the config is "what plugins", not "what work".
  */
 export interface KelexSettings {
-  /** Renderer plugin package to import + load, e.g. "@kelex/plugin-renderer-html". */
+  /** Renderer plugin package to import + load, e.g. "@rafters/kelex-renderer-html". */
   renderer: string;
   /**
-   * Handler plugin package to import + load, e.g. "@kelex/plugin-handler-post".
+   * Handler plugin package to import + load, e.g. "@rafters/kelex-handler-post".
    * Optional: without one the form is the renderer's markup, unwired.
    */
   handler?: string;

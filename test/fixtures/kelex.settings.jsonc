@@ -1,7 +1,7 @@
 {
   // Settings for the CLI spec: the default plugins, resolved from the repo root
   // above this directory, with an action the tests can recognize.
-  "renderer": "@kelex/plugin-renderer-html",
-  "handler": "@kelex/plugin-handler-post",
+  "renderer": "@rafters/kelex-renderer-html",
+  "handler": "@rafters/kelex-handler-post",
   "renderer.options": { "action": "/fixture-submit" },
 }

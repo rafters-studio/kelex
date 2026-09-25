@@ -1,12 +1,12 @@
 # kelex
 
-Releases are tag-driven: kelex, `@kelex/plugin-renderer-html` and `@kelex/plugin-handler-post` share one version, and a `vX.Y.Z` tag publishes all three. The entries below Unreleased were published as `@rafters-studio/kelex`.
+Releases are tag-driven: `@rafters/kelex`, `@rafters/kelex-renderer-html` and `@rafters/kelex-handler-post` share one version, and a `vX.Y.Z` tag publishes all three. The entries below Unreleased were published as `@rafters-studio/kelex`.
 
 ## Unreleased
 
 ### Breaking
 
-- **kelex is a plugin host.** A `kelex.settings.jsonc` names a renderer and, optionally, a handler; `kelex form` and `generateForm` load them from your project and generate the form. The HTML renderer and the POST handler moved out of the core package into `@kelex/plugin-renderer-html` and `@kelex/plugin-handler-post`. The package is now `kelex`, with subpath entries (`kelex/engine`, `kelex/introspection`, `kelex/conformance`, `kelex/targets`, `kelex/schema-writer`) in place of one barrel.
+- **kelex is a plugin host.** A `kelex.settings.jsonc` names a renderer and, optionally, a handler; `kelex form` and `generateForm` load them from your project and generate the form. The HTML renderer and the POST handler moved out of the core package into `@rafters/kelex-renderer-html` and `@rafters/kelex-handler-post`. The package is now `@rafters/kelex` (the command is still `kelex`), with subpath entries (`@rafters/kelex/engine`, `@rafters/kelex/introspection`, `@rafters/kelex/conformance`, `@rafters/kelex/targets`, `@rafters/kelex/schema-writer`) in place of one barrel.
 - **The React target is gone.** The composite JSON descriptor is the only built-in codegen target.
 - **Warnings are structured**: `{ path, code, message }`, with a stable `code` to switch on. Every code is documented in `docs/warnings.md`.
 - **`generateForm` is generic over the output type** and returns the renderer's output unchanged; the CLI refuses output that is not a string.

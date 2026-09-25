@@ -128,7 +128,7 @@ describe("CLI", () => {
       ]);
 
       expect(result).toContain("Generated");
-      expect(result).toContain("@kelex/plugin-renderer-html + @kelex/plugin-handler-post");
+      expect(result).toContain("@rafters/kelex-renderer-html + @rafters/kelex-handler-post");
       const html = fs.readFileSync(outputPath, "utf-8");
       expect(html.startsWith("<form")).toBe(true);
       expect(html).toContain('action="/fixture-submit"'); // renderer.options from the settings
@@ -158,10 +158,10 @@ describe("CLI", () => {
         "-o",
         outputPath,
         "-H",
-        "@kelex/no-such-handler",
+        "no-such-kelex-handler",
       ]);
 
-      expect(stderr).toContain('cannot resolve plugin "@kelex/no-such-handler"');
+      expect(stderr).toContain('cannot resolve plugin "no-such-kelex-handler"');
       expect(fs.existsSync(outputPath)).toBe(false);
     });
 

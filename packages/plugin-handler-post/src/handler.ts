@@ -1,4 +1,4 @@
-import type { Handler } from "kelex/engine";
+import type { Handler } from "@rafters/kelex/engine";
 import { RUNTIME } from "./runtime";
 
 /**

@@ -1,9 +1,9 @@
 import { describe, expect, it } from "vitest";
 import { z } from "zod/v4";
-import { render, validateRenderer } from "kelex/engine";
-import { conformance } from "kelex/conformance";
-import type { FieldType } from "kelex/introspection";
-import { introspect } from "kelex/introspection";
+import { render, validateRenderer } from "@rafters/kelex/engine";
+import { conformance } from "@rafters/kelex/conformance";
+import type { FieldType } from "@rafters/kelex/introspection";
+import { introspect } from "@rafters/kelex/introspection";
 import { htmlRenderer } from "../src/renderer";
 
 const OPTS = { formName: "F", schemaImportPath: "./f", schemaExportName: "s" };

@@ -1,4 +1,4 @@
-import type { Child, Composer } from "kelex/engine";
+import type { Child, Composer } from "@rafters/kelex/engine";
 import { attrs, escapeHtml } from "./attrs";
 import { pathToId } from "./path-id";
 
