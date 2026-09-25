@@ -209,6 +209,19 @@ describe("CLI", () => {
         project = fs.mkdtempSync(path.join(os.tmpdir(), "kelex-consumer-"));
         fs.writeFileSync(path.join(project, "package.json"), `{ "name": "consumer" }`);
         installRenderer("esm-renderer");
+        installPackage(
+          "tree-renderer",
+          { type: "module", exports: { ".": { import: "./index.js" } } },
+          {
+            "index.js": [
+              `import createHtmlRenderer from "${rendererDist}";`,
+              "export default (options) => {",
+              "  const base = createHtmlRenderer(options);",
+              "  return { ...base, form: (children) => ({ tree: base.form(children) }) };",
+              "};",
+            ].join("\n"),
+          },
+        );
         installRenderer("other-renderer");
         installPackage(
           "cjs-handler",
@@ -240,6 +253,26 @@ describe("CLI", () => {
         const html = fs.readFileSync(outputPath, "utf-8");
         expect(html.startsWith("<!-- esm-renderer --><form")).toBe(true);
         expect(html.endsWith("<!-- cjs-handler -->")).toBe(true);
+      });
+
+      it("refuses to write a renderer's output that is not text, naming the renderer (#255)", () => {
+        const outputPath = path.join(TEST_OUTPUT_DIR, "consumer-tree.html");
+        // Renderer only: a handler would stringify the tree before the CLI saw it.
+        const settings = path.join(project, "kelex.tree.jsonc");
+        fs.writeFileSync(settings, `{ "renderer": "tree-renderer" }`);
+
+        const { stderr } = runCliWithError([
+          schemaPath,
+          "-e",
+          "userSchema",
+          "-c",
+          settings,
+          "-o",
+          outputPath,
+        ]);
+
+        expect(stderr).toContain('renderer "tree-renderer" produced object, not text');
+        expect(fs.existsSync(outputPath)).toBe(false);
       });
 
       it("loads the renderer -r names instead of the settings' renderer", () => {

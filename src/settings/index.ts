@@ -103,8 +103,13 @@ export async function loadPlugin<T>(
   return (factory as PluginFactory<T>)(options);
 }
 
-export interface FormResult {
-  output: string;
+/**
+ * What `generateForm` returns. `output` is whatever the renderer (and handler)
+ * produce -- a string of HTML for the defaults, a tree for a React renderer --
+ * so the caller names `T`; kelex does not know it (#255).
+ */
+export interface FormResult<T = unknown> {
+  output: T;
   fields: string[];
 }
 
@@ -119,10 +124,10 @@ const merge = (
  * settings name, and fold the form. You pass the schema and any per-run options;
  * kelex loads the settings and the plugins itself, like any plugin system.
  */
-export async function generateForm(
+export async function generateForm<T = unknown>(
   schema: Parameters<typeof introspect>[0],
   options: GenerateOptions = {},
-): Promise<FormResult> {
+): Promise<FormResult<T>> {
   const configPath = options.config ?? DEFAULT_SETTINGS;
   // Settings passed as an object get the same checks as a file.
   const settings = options.settings
@@ -137,14 +142,14 @@ export async function generateForm(
     schemaExportName: "schema",
   });
 
-  const renderer = await loadPlugin<Renderer<unknown>>(
+  const renderer = await loadPlugin<Renderer<T>>(
     settings.renderer,
     merge(settings["renderer.options"], options.rendererOptions),
     from,
   );
   // No handler named: the renderer's output is the form, unwired.
   const handler = settings.handler
-    ? await loadPlugin<Handler<unknown>>(
+    ? await loadPlugin<Handler<T>>(
         settings.handler,
         merge(settings["handler.options"], options.handlerOptions),
         from,
@@ -152,7 +157,7 @@ export async function generateForm(
     : undefined;
 
   const output = renderForm(descriptor, renderer, handler);
-  return { output: String(output), fields: descriptor.fields.map((f) => f.name) };
+  return { output, fields: descriptor.fields.map((f) => f.name) };
 }
 
 /** Write a generated form to `outPath`, creating parent dirs. */

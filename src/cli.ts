@@ -105,6 +105,14 @@ async function runForm(schemaPath: string, options: FormCommandOptions): Promise
   });
 
   const outPath = options.out ?? deriveOutputPath(schemaPath, ".html");
+  // The CLI writes a file, so it needs text; a renderer that builds a tree (a
+  // React renderer, say) belongs in code that calls generateForm, not here.
+  if (typeof output !== "string") {
+    throw new Error(
+      `renderer "${settings.renderer}" produced ${output === null ? "null" : typeof output}, ` +
+        "not text; the CLI can only write a renderer whose output is a string",
+    );
+  }
   writeForm(outPath, output);
   console.log(`✓ Generated ${path.resolve(outPath)}`);
   console.log(`  renderer: ${settings.renderer} + ${settings.handler ?? "no handler (unwired)"}`);
