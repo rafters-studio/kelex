@@ -1,0 +1,48 @@
+{
+  "name": "@kelex/plugin-handler-post",
+  "version": "0.1.2",
+  "description": "Default async-POST handler plugin for kelex — framework-free, native client validation.",
+  "keywords": [
+    "form",
+    "handler",
+    "kelex",
+    "kelex-plugin"
+  ],
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/rafters-studio/kelex.git",
+    "directory": "packages/plugin-handler-post"
+  },
+  "files": [
+    "dist"
+  ],
+  "type": "module",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    }
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "scripts": {
+    "build": "tsdown",
+    "dev": "tsdown --watch",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "test:unit": "vitest run",
+    "test:all": "vitest run",
+    "prepublishOnly": "pnpm build"
+  },
+  "devDependencies": {
+    "@kelex/plugin-renderer-html": "workspace:*",
+    "kelex": "workspace:*",
+    "zod": "^4.4.3"
+  },
+  "peerDependencies": {
+    "kelex": "workspace:^",
+    "zod": "^4.0.0"
+  }
+}

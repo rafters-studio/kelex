@@ -3,9 +3,9 @@ import { renderForm, validateRenderer } from "../../src/engine";
 import { controlPaths } from "../../src/engine/paths";
 import type { FieldConstraints, FieldType } from "../../src/introspection";
 import { introspect } from "../../src/introspection";
-import { postHandler } from "../../src/handlers/post";
-import { htmlRenderer } from "../../src/renderers/html";
-import { writeSchema } from "../../src/schema-writer/writer";
+import { postHandler } from "@kelex/plugin-handler-post";
+import { htmlRenderer } from "@kelex/plugin-renderer-html";
+import { writeSchema } from "../../src/schema-writer";
 import { evaluateSchemaCode } from "../helpers/evaluate-schema";
 
 import { patientIntakeSchema } from "./01-healthcare-patient-intake";
@@ -662,8 +662,7 @@ describe("Form pipeline: default renderer + handler over real schemas", () => {
           testCase.schema as Parameters<typeof introspect>[0],
           INTROSPECT_OPTS,
         );
-        // Render without the handler so the extracted names are the form's own,
-        // not the runtime script's string literals.
+        // Render without the handler so the extracted names are the form's own.
         const html = renderForm(descriptor, htmlRenderer);
         const stamped = new Set(namesOf(html));
         const missing = controlPaths(descriptor)

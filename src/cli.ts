@@ -5,7 +5,10 @@ import { createRequire } from "node:module";
 import * as path from "node:path";
 import { pathToFileURL } from "node:url";
 import { Command } from "commander";
+import type { $ZodType } from "zod/v4/core";
 import { generate } from "./codegen/generator";
+import { generateForm, loadSettings, writeForm } from "./settings";
+import type { KelexSettings } from "./settings/types";
 import { listTargets, resolveTarget } from "./targets/registry";
 
 interface GenerateCommandOptions {
@@ -15,12 +18,40 @@ interface GenerateCommandOptions {
   target: string;
 }
 
+interface FormCommandOptions {
+  config: string;
+  export: string;
+  out?: string;
+  renderer?: string;
+  handler?: string;
+  action?: string;
+}
+
 const require = createRequire(import.meta.url);
 const { version } = require("../package.json") as { version: string };
 
 const program = new Command();
 
-program.name("kelex").description("Generate forms from Zod schemas").version(version);
+program.name("kelex").description("Zod schema in, form out — a plugin host").version(version);
+
+program
+  .command("form <schema-path>", { isDefault: true })
+  .description("Generate a form: kelex.settings.jsonc names the plugins; the schema is a run input")
+  .option("-c, --config <path>", "Settings file (plugins to load)", "kelex.settings.jsonc")
+  .option("-e, --export <name>", "Exported schema name", "schema")
+  .option("-o, --out <path>", "Output path (default derived from the schema path)")
+  .option("-r, --renderer <pkg>", "Renderer plugin package (overrides settings)")
+  .option("-H, --handler <pkg>", "Handler plugin package (overrides settings)")
+  .option("-a, --action <url>", "Form POST action (forwarded to the renderer)")
+  .action(async (schemaPath: string, options: FormCommandOptions) => {
+    try {
+      await runForm(schemaPath, options);
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      console.error(`Error: ${message}`);
+      process.exit(1);
+    }
+  });
 
 program
   .command("generate <schema-path>")
@@ -55,30 +86,60 @@ program
 
 program.parse();
 
-async function runGenerate(schemaPath: string, options: GenerateCommandOptions): Promise<void> {
-  const absoluteSchemaPath = path.resolve(schemaPath);
+/**
+ * The settings name the plugins; the schema, output, and options are run inputs.
+ * Import the schema module, then fold the form with the loaded plugins.
+ */
+async function runForm(schemaPath: string, options: FormCommandOptions): Promise<void> {
+  const settings: KelexSettings = loadSettings(options.config);
+  if (options.renderer) settings.renderer = options.renderer;
+  if (options.handler) settings.handler = options.handler;
 
+  const schema = await importSchema(schemaPath, options.export);
+  const { output, fields } = await generateForm(schema, {
+    settings,
+    formName: deriveFormName(options.export),
+    rendererOptions: options.action ? { action: options.action } : undefined,
+    // The CLI loads the settings itself, so it names where they came from.
+    from: path.dirname(path.resolve(options.config)),
+  });
+
+  const outPath = options.out ?? deriveOutputPath(schemaPath, ".html");
+  writeForm(outPath, output);
+  console.log(`✓ Generated ${path.resolve(outPath)}`);
+  console.log(`  renderer: ${settings.renderer} + ${settings.handler}`);
+  console.log(`  ${fields.length} fields: ${fields.join(", ")}`);
+}
+
+/**
+ * Import a schema module and return the named export (or the default), checked
+ * to be a live Zod 4 schema. Both commands read their schema through this.
+ */
+async function importSchema(schemaPath: string, exportName: string): Promise<$ZodType> {
+  const absoluteSchemaPath = path.resolve(schemaPath);
   if (!fs.existsSync(absoluteSchemaPath)) {
     throw new Error(`Schema file not found: ${absoluteSchemaPath}`);
   }
-
-  const target = resolveTarget(options.target);
-
-  const schemaUrl = pathToFileURL(absoluteSchemaPath).href;
-  const schemaModule = await import(schemaUrl);
-
-  const schemaExportName = options.schema;
-  const schema = schemaModule[schemaExportName] ?? schemaModule.default;
-
-  if (!schema) {
-    throw new Error(`Schema "${schemaExportName}" not exported from ${schemaPath}`);
+  const schemaModule: Record<string, unknown> = await import(
+    pathToFileURL(absoluteSchemaPath).href
+  );
+  const schema = schemaModule[exportName] ?? schemaModule.default;
+  if (schema === undefined) {
+    throw new Error(`Schema "${exportName}" not exported from ${schemaPath}`);
   }
-
-  if (!schema._zod) {
+  if (typeof schema !== "object" || schema === null || !("_zod" in schema)) {
     throw new Error(
-      `Export "${schemaExportName}" is not a Zod schema. Ensure you are using zod >= 4.0.0`,
+      `Export "${exportName}" is not a Zod schema. Ensure you are using zod >= 4.0.0`,
     );
   }
+  return schema as $ZodType;
+}
+
+async function runGenerate(schemaPath: string, options: GenerateCommandOptions): Promise<void> {
+  const schemaExportName = options.schema;
+  const schema = await importSchema(schemaPath, schemaExportName);
+  const target = resolveTarget(options.target);
+  const absoluteSchemaPath = path.resolve(schemaPath);
 
   const outputPath = options.output ?? deriveOutputPath(schemaPath, target.defaultExtension);
   const absoluteOutputPath = path.resolve(outputPath);

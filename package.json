@@ -1,12 +1,11 @@
 {
-  "name": "@rafters/kelex",
+  "name": "kelex",
   "version": "0.1.2",
-  "description": "Generate forms from Zod schemas with pluggable targets",
+  "description": "Zod schema in, form out — a config-driven form plugin host.",
   "keywords": [
     "codegen",
     "form",
-    "rafters",
-    "typescript",
+    "plugin",
     "zod"
   ],
   "homepage": "https://rafters.studio/tools/kelex",
@@ -19,46 +18,60 @@
     "kelex": "./dist/cli.js"
   },
   "files": [
-    "dist",
-    "src/renderers/html/form.css",
-    "README.md"
+    "dist"
   ],
   "type": "module",
-  "main": "./dist/index.js",
-  "types": "./dist/index.d.ts",
   "exports": {
     ".": {
-      "import": "./dist/index.js",
-      "types": "./dist/index.d.ts"
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
     },
-    "./form.css": "./src/renderers/html/form.css"
+    "./engine": {
+      "types": "./dist/engine.d.ts",
+      "import": "./dist/engine.js"
+    },
+    "./introspection": {
+      "types": "./dist/introspection.d.ts",
+      "import": "./dist/introspection.js"
+    },
+    "./conformance": {
+      "types": "./dist/conformance.d.ts",
+      "import": "./dist/conformance.js"
+    },
+    "./targets": {
+      "types": "./dist/targets.d.ts",
+      "import": "./dist/targets.js"
+    },
+    "./schema-writer": {
+      "types": "./dist/schema-writer.d.ts",
+      "import": "./dist/schema-writer.js"
+    }
+  },
+  "publishConfig": {
+    "access": "public"
   },
   "scripts": {
-    "build": "tsdown",
+    "build": "tsdown && pnpm -r --filter=\"./packages/*\" build",
     "dev": "tsdown --watch",
-    "typecheck": "tsc --noEmit",
-    "test": "vitest run --exclude '**/*.spec.ts'",
-    "test:unit": "vitest run --exclude '**/*.spec.ts'",
-    "test:spec": "vitest run test/cli.spec.ts test/stress/stress.spec.ts",
-    "test:all": "vitest run",
-    "test:watch": "vitest",
-    "test:coverage": "vitest run --coverage",
-    "lint": "oxlint src test",
-    "lint:fix": "oxlint --fix src test",
+    "typecheck": "tsc --noEmit && pnpm -r --filter=\"./packages/*\" typecheck",
+    "test": "vitest run --exclude '**/*.spec.ts' && pnpm -r --filter=\"./packages/*\" test",
+    "test:unit": "vitest run --exclude '**/*.spec.ts' && pnpm -r --filter=\"./packages/*\" test:unit",
+    "test:all": "vitest run && pnpm -r --filter=\"./packages/*\" test:all",
+    "lint": "oxlint src test packages",
+    "lint:fix": "oxlint --fix src test packages",
     "format": "oxfmt",
     "format:check": "oxfmt --check",
-    "preflight": "pnpm lint && pnpm typecheck && pnpm test:unit",
-    "flightcheck": "pnpm lint && pnpm format:check && pnpm typecheck && pnpm test:all",
-    "prepublishOnly": "pnpm build",
-    "changeset": "changeset",
-    "version": "changeset version",
-    "release": "pnpm build && changeset publish"
+    "preflight": "pnpm build && pnpm lint && pnpm typecheck && pnpm test:unit",
+    "flightcheck": "pnpm lint && pnpm format:check && pnpm build && pnpm typecheck && pnpm test:all",
+    "prepublishOnly": "tsdown"
   },
   "dependencies": {
-    "commander": "^12.0.0"
+    "commander": "^12.0.0",
+    "jsonc-parser": "^3.3.1"
   },
   "devDependencies": {
-    "@changesets/cli": "^2.29.8",
+    "@kelex/plugin-handler-post": "workspace:*",
+    "@kelex/plugin-renderer-html": "workspace:*",
     "@types/node": "^25.0.9",
     "happy-dom": "^20.11.1",
     "lefthook": "^2.0.15",
@@ -73,6 +86,6 @@
     "zod": "^4.0.0"
   },
   "engines": {
-    "node": ">=22"
+    "node": ">=24"
   }
 }

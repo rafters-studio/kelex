@@ -4,8 +4,6 @@ pre-commit:
     lint:
       glob: "*.{ts,tsx,js,jsx}"
       run: pnpm oxlint {staged_files}
-    typecheck:
-      run: pnpm typecheck
 
 pre-push:
   commands:

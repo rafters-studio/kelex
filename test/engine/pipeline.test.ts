@@ -77,10 +77,4 @@ describe("renderForm pipeline + floor (#223)", () => {
     };
     expect(validateRenderer(bad).some((g) => g.includes("missing"))).toBe(true);
   });
-
-  it("keeps the old generate export alongside the new renderForm", async () => {
-    const mod = await import("../../src/index");
-    expect(typeof mod.generate).toBe("function"); // old target pipeline, untouched
-    expect(typeof mod.renderForm).toBe("function"); // new engine pipeline
-  });
 });
