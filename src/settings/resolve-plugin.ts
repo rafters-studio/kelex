@@ -5,25 +5,32 @@ import { pathToFileURL } from "node:url";
 
 // The conditions active for a Node `import()`. As in Node, a condition map is
 // read in the package's own key order and the first active key wins.
-const ACTIVE = new Set(["import", "node", "default"]);
-// Not active for `import()`, but `import()` loads CommonJS too, so a package
-// that exports only a `require` target still loads through it.
-const FALLBACK = "require";
+const ACTIVE: ReadonlySet<string> = new Set(["import", "node", "default"]);
+// Only if the whole map yields nothing under those does kelex search it again
+// with `require` active too. Node's `import()` would stop there, but it loads
+// CommonJS, so kelex lets a require-only package load. This is the one place
+// kelex is looser than Node.
+const WITH_REQUIRE: ReadonlySet<string> = new Set([...ACTIVE, "require"]);
 
 // A package name: `name` or `@scope/name`, with no subpath and no file path.
 const PACKAGE_NAME = /^(?:@[^/\\\s]+\/)?[^/\\\s.][^/\\\s]*$/;
 
 /**
- * Pick the file an `exports` value points at for an `import()`: a string is the
- * target; an array is tried in order; an object is either a subpath map (keys
- * start with ".", so take ".") or a condition map (the first active condition
- * in key order, else `require`). Returns undefined when nothing applies.
+ * Pick the file an `exports` value points at for an `import()`. Resolves the
+ * whole tree with the `import()` conditions first, and only if that finds
+ * nothing, again with `require` active. Returns undefined when nothing applies.
  */
 export function exportTarget(value: unknown): string | undefined {
+  return pick(value, ACTIVE) ?? pick(value, WITH_REQUIRE);
+}
+
+// A string is the target; an array is tried in order; an object is a subpath
+// map (keys start with ".", so take ".") or a condition map, read in key order.
+function pick(value: unknown, active: ReadonlySet<string>): string | undefined {
   if (typeof value === "string") return value;
   if (Array.isArray(value)) {
     for (const item of value) {
-      const target = exportTarget(item);
+      const target = pick(item, active);
       if (target !== undefined) return target;
     }
     return undefined;
@@ -31,9 +38,10 @@ export function exportTarget(value: unknown): string | undefined {
   if (typeof value !== "object" || value === null) return undefined;
   const map = value as Record<string, unknown>;
   const keys = Object.keys(map);
-  if (keys.some((k) => k.startsWith("."))) return exportTarget(map["."]);
-  for (const key of [...keys.filter((k) => ACTIVE.has(k)), ...keys.filter((k) => k === FALLBACK)]) {
-    const target = exportTarget(map[key]);
+  if (keys.some((k) => k.startsWith("."))) return pick(map["."], active);
+  for (const key of keys) {
+    if (!active.has(key)) continue;
+    const target = pick(map[key], active);
     if (target !== undefined) return target;
   }
   return undefined;
@@ -72,11 +80,12 @@ export function resolvePlugin(pkg: string, from: string): string {
   }
   // `main` predates exports and gets Node's CommonJS lookup: an omitted ".js",
   // a directory holding index.js, or index.js when there is no main at all.
-  const main = "main" in fields && typeof fields.main === "string" ? fields.main : ".";
+  const main = "main" in fields && typeof fields.main === "string" ? fields.main : undefined;
   try {
-    return pathToFileURL(createRequire(manifestPath).resolve(`./${main}`)).href;
+    return pathToFileURL(createRequire(manifestPath).resolve(`./${main ?? "."}`)).href;
   } catch (error) {
-    throw new Error(`plugin "${pkg}" has no loadable main "${main}": ${messageOf(error)}`, {
+    const what = main === undefined ? "no main, no exports, and no index.js" : `main "${main}"`;
+    throw new Error(`plugin "${pkg}" has nothing to load (${what}): ${messageOf(error)}`, {
       cause: error,
     });
   }

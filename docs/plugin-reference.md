@@ -20,7 +20,7 @@ The host reads the package name from `kelex.settings.jsonc`, resolves it from yo
 
 Resolution starts at the directory that holds the settings file, so run the CLI from anywhere. When you pass `settings` as an object to `generateForm`, there is no file, so resolution starts at the current working directory. Pass `from` to choose the directory yourself.
 
-`renderer` and `handler` name packages (`name` or `@scope/name`), not file paths. A plugin can ship as ESM or CommonJS. kelex reads an `exports` map the way Node does for `import()`, taking the first of `import`, `node`, or `default` in the package's own key order, with `require` as a last resort. Without `exports`, `main` gets Node's CommonJS lookup, so `lib/index` and a directory both work. A TypeScript-compiled CommonJS default export (`exports.default = factory`) loads too.
+`renderer` and `handler` name packages (`name` or `@scope/name`), not file paths. A plugin can ship as ESM or CommonJS. kelex reads an `exports` map the way Node does for `import()`, taking the first of `import`, `node`, or `default` in the package's own key order. If the whole map has no target for those, kelex reads it again with `require` too, so a package that exports only a CommonJS entry still loads. That is the one place kelex is looser than a bare `import()`. Without `exports`, `main` gets Node's CommonJS lookup, so `lib/index` and a directory both work. A TypeScript-compiled CommonJS default export (`exports.default = factory`) loads too.
 
 ## Settings keys
 

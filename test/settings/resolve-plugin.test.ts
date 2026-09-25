@@ -112,10 +112,14 @@ describe("resolvePlugin", () => {
     expect(resolved("no-main")).toBe("no-main/index.js");
   });
 
-  it("names the plugin when main points at nothing", () => {
+  it("names the plugin and what it looked for when there is nothing to load", () => {
     installPackage("bad-main", { main: "./missing.js" }, {});
+    installPackage("empty", {}, {});
     expect(() => resolvePlugin("bad-main", project)).toThrow(
-      /plugin "bad-main" has no loadable main/,
+      /plugin "bad-main" has nothing to load \(main "\.\/missing\.js"\)/,
+    );
+    expect(() => resolvePlugin("empty", project)).toThrow(
+      /plugin "empty" has nothing to load \(no main, no exports, and no index\.js\)/,
     );
   });
 
@@ -145,9 +149,13 @@ describe("exportTarget", () => {
     expect(exportTarget({ default: "./default.js", node: "./node.js" })).toBe("./default.js");
   });
 
-  it("falls back to require only when no active condition applies", () => {
-    expect(exportTarget({ require: "./r.cjs", default: "./d.js" })).toBe("./d.js");
-    expect(exportTarget({ require: "./r.cjs" })).toBe("./r.cjs");
+  it("tries require only after the whole map yields nothing for import()", () => {
+    // Node's import() resolves this to ./d.mjs: the nested node map has no
+    // active key, so resolution continues to the outer default.
+    const nested = { ".": { node: { require: "./n.cjs" }, default: "./d.mjs" } };
+    expect(exportTarget(nested)).toBe("./d.mjs");
+    // With no import() target anywhere, a require-only package still loads.
+    expect(exportTarget({ ".": { require: "./r.cjs" } })).toBe("./r.cjs");
   });
 
   it("returns undefined when no condition kelex honors applies", () => {
