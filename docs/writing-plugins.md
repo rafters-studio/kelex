@@ -136,7 +136,7 @@ The default HTML renderer solves this with a `<select data-variant-of>` plus pan
 
 ## Use the label with care
 
-`i.field.label` is the field's `meta.title` when the schema author set one, and otherwise a label kelex derived from the key (`displayName` becomes `Display Name`). `i.field.meta?.title !== undefined` tells you which. An authored label is a decision; render it as written. A derived label is a guess; replace it if your renderer has a better one. [Schemas](./schemas.md#labels-authored-or-derived) has more.
+`i.field.label` is the field's `meta.title` when the schema author set one, and otherwise a label kelex derived from the key (`displayName` becomes `Display Name`). `typeof i.field.meta?.title === "string"` tells you which. An authored label is a decision; render it as written. A derived label is a guess; replace it if your renderer has a better one. [Schemas](./schemas.md#labels-authored-or-derived) has more.
 
 ## Stamp the path
 

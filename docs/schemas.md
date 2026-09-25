@@ -22,15 +22,15 @@ Field order is preserved.
 
 Each of these is read, and a [warning](./warnings.md) says what was left out.
 
-| construct                                                                                         | what kelex records                                                                                 | what it does not                                                                 |
-| ------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------- |
-| `.refine()`, `.superRefine()`, `.check()`                                                         | That a custom check exists; for a check on an object, its message too when it is a literal string. | What the check tests. kelex does not run or reason about it.                     |
-| `.transform()`, `.pipe()`                                                                         | The input side: what the form collects.                                                            | The output type and any output-side checks.                                      |
-| `z.coerce.*`                                                                                      | The target type.                                                                                   | The coercion. The form collects raw input.                                       |
-| `strictObject`, `catchall`, `passthrough`                                                         | The object and its fields.                                                                         | The unknown-key policy.                                                          |
-| `z.record` with a non-string key                                                                  | The value schema.                                                                                  | The key schema.                                                                  |
-| numeric `enum`                                                                                    | The values.                                                                                        | That it was an enum; the schema-writer emits a union of literals.                |
-| `bigint`, `int64`, `uint64`, `set`, `map`, `file`, `custom`, and other types with no form control | The field, as a plain string.                                                                      | The type, and every check or implied range on it, each named in its own warning. |
+| construct                                                                                         | what kelex records                                                                                                                 | what it does not                                                                 |
+| ------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------- |
+| `.refine()`, `.superRefine()`, `.check()`                                                         | That a custom check exists; for a check on the root schema or an intersection member, its message too when it is a literal string. | What the check tests. kelex does not run or reason about it.                     |
+| `.transform()`, `.pipe()`                                                                         | The input side: what the form collects.                                                                                            | The output type and any output-side checks.                                      |
+| `z.coerce.*`                                                                                      | The target type.                                                                                                                   | The coercion. The form collects raw input.                                       |
+| `strictObject`, `catchall`, `passthrough`                                                         | The object and its fields.                                                                                                         | The unknown-key policy.                                                          |
+| `z.record` with a non-string key                                                                  | The value schema.                                                                                                                  | The key schema.                                                                  |
+| numeric `enum`                                                                                    | The values.                                                                                                                        | That it was an enum; the schema-writer emits a union of literals.                |
+| `bigint`, `int64`, `uint64`, `set`, `map`, `file`, `custom`, and other types with no form control | The field, as a plain string.                                                                                                      | The type, and every check or implied range on it, each named in its own warning. |
 
 In every case the rule still lives in your schema. Validate submissions with that schema on the server, and the form and the server agree.
 
@@ -39,7 +39,7 @@ In every case the rule still lives in your schema. Validate submissions with tha
 A field's `label` is its `meta.title` when you set one, and otherwise a label derived from the key (`displayName` becomes `Display Name`). The two look the same on the field, so check which you have:
 
 ```typescript
-const authored = field.meta?.title !== undefined;
+const authored = typeof field.meta?.title === "string";
 ```
 
 An authored label is a decision someone made; keep it. A derived label is a guess from the key; a renderer or editor can replace it freely.
