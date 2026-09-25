@@ -182,7 +182,7 @@ Entry points are explicit: `kelex/engine`, `kelex/introspection`, `kelex/conform
 
 ## Development
 
-pnpm only. `pnpm build`, `pnpm -r test`, `pnpm flightcheck` before a PR. oxlint and oxfmt, TypeScript 7, tsdown, vitest.
+pnpm only. `pnpm test` runs the unit tests with no build; `pnpm build` then `pnpm test:all` adds the integration specs. `pnpm flightcheck` before a PR. oxlint and oxfmt, TypeScript 7, tsdown, vitest.
 
 ## License
 

@@ -77,11 +77,4 @@ describe("renderForm pipeline + floor (#223)", () => {
     };
     expect(validateRenderer(bad).some((g) => g.includes("missing"))).toBe(true);
   });
-
-  it("exposes both pipelines from their own entry points (no god barrel)", async () => {
-    const engine = await import("../../src/engine");
-    const codegen = await import("../../src/codegen");
-    expect(typeof engine.renderForm).toBe("function"); // new engine pipeline
-    expect(typeof codegen.generate).toBe("function"); // old target pipeline, untouched
-  });
 });
