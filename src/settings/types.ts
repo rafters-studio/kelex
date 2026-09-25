@@ -6,8 +6,11 @@
 export interface KelexSettings {
   /** Renderer plugin package to import + load, e.g. "@kelex/plugin-renderer-html". */
   renderer: string;
-  /** Handler plugin package to import + load, e.g. "@kelex/plugin-handler-post". */
-  handler: string;
+  /**
+   * Handler plugin package to import + load, e.g. "@kelex/plugin-handler-post".
+   * Optional: without one the form is the renderer's markup, unwired.
+   */
+  handler?: string;
   /** Default options for the renderer plugin (a run can override them). */
   "renderer.options"?: Record<string, unknown>;
   /** Default options for the handler plugin (a run can override them). */

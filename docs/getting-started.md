@@ -20,7 +20,8 @@ Put a `kelex.settings.jsonc` in your project root:
 
 ```jsonc
 {
-  // The only required settings: which plugins to load.
+  // Which plugins to load. Only the renderer is required; without a handler
+  // the form is plain markup with no script.
   "renderer": "@kelex/plugin-renderer-html",
   "handler": "@kelex/plugin-handler-post",
 
