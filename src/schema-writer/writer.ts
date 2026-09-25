@@ -14,13 +14,20 @@ export function writeSchema(options: SchemaWriterOptions): SchemaWriterResult {
 
   // Every declaration in the file needs its own name: two schemas under one
   // name would emit a duplicate export (and overwrite each other in the sort).
+  // The same holds for the type each declaration exports: userSchema and
+  // UserSchema are distinct names but both infer the type User.
   const names = [form, ...(embeddedSchemas ?? []).map((s) => s.form)].map(exportNameOf);
-  const clash = names.find((name, i) => names.indexOf(name) !== i);
-  if (clash !== undefined) {
-    throw new Error(
-      `Two schemas share the export name "${clash}". ` +
-        "Give each form a distinct name or schemaExportName.",
-    );
+  for (const [what, list] of [
+    ["export name", names],
+    ["type name", names.map(inferTypeName)],
+  ] as const) {
+    const clash = list.find((name, i) => list.indexOf(name) !== i);
+    if (clash !== undefined) {
+      throw new Error(
+        `Two schemas share the ${what} "${clash}". ` +
+          "Give each form a distinct name or schemaExportName.",
+      );
+    }
   }
 
   const lines: string[] = ['import { z } from "zod/v4";', ""];

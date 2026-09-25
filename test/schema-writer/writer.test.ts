@@ -622,6 +622,22 @@ describe("writeSchema", () => {
       expect(run).toThrow(/share the export name "addressSchema"/);
     });
 
+    it("refuses two schemas whose distinct export names infer the same type name", () => {
+      const run = () =>
+        writeSchema({
+          form: makeForm({ schemaExportName: "userSchema", fields: [makeField({ name: "a" })] }),
+          embeddedSchemas: [
+            {
+              form: makeForm({
+                schemaExportName: "UserSchema",
+                fields: [makeField({ name: "b" })],
+              }),
+            },
+          ],
+        });
+      expect(run).toThrow(/share the type name "User"/);
+    });
+
     it("refuses an embedded schema that would share the primary schema's name", () => {
       const run = () =>
         writeSchema({ form: named("UserForm"), embeddedSchemas: [{ form: named("User") }] });
