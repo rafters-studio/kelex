@@ -149,6 +149,22 @@ describe("recursion spelled with getters, the Zod 4 idiom (#251)", () => {
     expect(refsOf(d.fields)).toEqual([["root.child", ["root"]]]);
   });
 
+  it("reports an intersection's warnings once, not again at the ref that closes it", () => {
+    const Base = z.object({ name: z.string() });
+    const Node: z.ZodType = z.intersection(
+      Base,
+      z.object({
+        name: z.string(),
+        get child() {
+          return Node.optional();
+        },
+      }),
+    );
+    const d = introspect(z.object({ root: Node }), OPTS);
+    const overlaps = d.warnings.filter((w) => w.code === "intersection-key-overlap");
+    expect(overlaps.map((w) => w.path)).toEqual([["root", "name"]]);
+  });
+
   it("keys on the path, not the schema: a sibling reusing one schema still expands", () => {
     const Address = z.object({ street: z.string() });
     const d = introspect(z.object({ home: Address, work: Address }), OPTS);
