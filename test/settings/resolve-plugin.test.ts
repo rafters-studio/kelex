@@ -179,6 +179,30 @@ describe("loadPlugin -- a factory's result must fit the role it fills (#259)", (
     );
   });
 
+  it("refuses a WeakSet for compose (#269)", async () => {
+    factoryReturning(
+      "weakset-compose",
+      "{ inventory: [], compose: new WeakSet(), form() {}, fallback() {} }",
+    );
+    await expect(loadPlugin("weakset-compose", undefined, project, "renderer")).rejects.toThrow(
+      'without an object "compose"; got a WeakSet',
+    );
+  });
+
+  it("accepts a compose with a composer named then, which is not a Promise (#269)", async () => {
+    factoryReturning(
+      "then-compose",
+      "{ inventory: [], compose: { then() {}, field() {} }, form() {}, fallback() {} }",
+    );
+    const renderer = await loadPlugin<{ compose: Record<string, unknown> }>(
+      "then-compose",
+      undefined,
+      project,
+      "renderer",
+    );
+    expect(typeof renderer.compose.then).toBe("function");
+  });
+
   it("says undefined, not an undefined, when a factory returns nothing", async () => {
     factoryReturning("empty-return", "undefined");
     await expect(loadPlugin("empty-return", undefined, project, "renderer")).rejects.toThrow(
