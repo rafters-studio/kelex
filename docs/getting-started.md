@@ -132,7 +132,7 @@ const { output } = await generateForm<string>(schema, {
 writeForm("signup.html", output);
 ```
 
-Pass `{ config: "path.jsonc" }` to read a different settings file, or `{ settings }` to skip the file entirely. The type argument names what your renderer produces: `string` for the HTML defaults, a tree type for a renderer that builds one.
+Pass `{ config: "path.jsonc" }` to read a different settings file, or `{ settings }` to skip the file entirely. The type argument names what your renderer produces: `string` for the HTML defaults, a tree type for a renderer that builds one. kelex takes it on trust, since plugins load at runtime, so name the type your plugins actually return.
 
 This path needs Node. It reads a file and resolves packages off disk.
 

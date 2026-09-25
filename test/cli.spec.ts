@@ -210,6 +210,11 @@ describe("CLI", () => {
         fs.writeFileSync(path.join(project, "package.json"), `{ "name": "consumer" }`);
         installRenderer("esm-renderer");
         installPackage(
+          "tree-handler",
+          { type: "module", main: "./index.js" },
+          { "index.js": "export default () => ({ wire: (form) => form });" },
+        );
+        installPackage(
           "tree-renderer",
           { type: "module", exports: { ".": { import: "./index.js" } } },
           {
@@ -272,6 +277,27 @@ describe("CLI", () => {
         ]);
 
         expect(stderr).toContain('renderer "tree-renderer" produced object, not text');
+        expect(fs.existsSync(outputPath)).toBe(false);
+      });
+
+      it("names the handler too when one ran after the renderer (#255)", () => {
+        const outputPath = path.join(TEST_OUTPUT_DIR, "consumer-tree-handled.html");
+        const settings = path.join(project, "kelex.tree-handled.jsonc");
+        fs.writeFileSync(settings, `{ "renderer": "tree-renderer", "handler": "tree-handler" }`);
+
+        const { stderr } = runCliWithError([
+          schemaPath,
+          "-e",
+          "userSchema",
+          "-c",
+          settings,
+          "-o",
+          outputPath,
+        ]);
+
+        expect(stderr).toContain(
+          'renderer "tree-renderer" with handler "tree-handler" produced object, not text',
+        );
         expect(fs.existsSync(outputPath)).toBe(false);
       });
 

@@ -108,9 +108,13 @@ async function runForm(schemaPath: string, options: FormCommandOptions): Promise
   // The CLI writes a file, so it needs text; a renderer that builds a tree (a
   // React renderer, say) belongs in code that calls generateForm, not here.
   if (typeof output !== "string") {
+    // The handler runs last, so with one named it may be the plugin that changed the type.
+    const source = settings.handler
+      ? `renderer "${settings.renderer}" with handler "${settings.handler}"`
+      : `renderer "${settings.renderer}"`;
+    const kind = output === null ? "null" : Array.isArray(output) ? "an array" : typeof output;
     throw new Error(
-      `renderer "${settings.renderer}" produced ${output === null ? "null" : typeof output}, ` +
-        "not text; the CLI can only write a renderer whose output is a string",
+      `${source} produced ${kind}, not text; the CLI can only write output that is a string`,
     );
   }
   writeForm(outPath, output);

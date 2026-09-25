@@ -106,7 +106,8 @@ export async function loadPlugin<T>(
 /**
  * What `generateForm` returns. `output` is whatever the renderer (and handler)
  * produce -- a string of HTML for the defaults, a tree for a React renderer --
- * so the caller names `T`; kelex does not know it (#255).
+ * so the caller names `T`; kelex does not know it (#255). `T` is the caller's
+ * assertion, not something kelex verifies: plugins load at runtime.
  */
 export interface FormResult<T = unknown> {
   output: T;
