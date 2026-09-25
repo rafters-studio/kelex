@@ -2,7 +2,8 @@ import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
-import { loadPlugin } from "../../src/settings";
+import { z } from "zod/v4";
+import { generateForm, loadPlugin } from "../../src/settings";
 import { exportTarget, factoryOf, resolvePlugin } from "../../src/settings/resolve-plugin";
 
 // A throwaway project with plugin packages installed under node_modules, built
@@ -90,6 +91,65 @@ describe("loadPlugin -- the package shapes a third-party plugin ships", () => {
     await expect(loadPlugin("not-a-factory", undefined, project)).rejects.toThrow(
       /must default-export a factory/,
     );
+  });
+});
+
+describe("loadPlugin -- a factory's result must fit the role it fills (#259)", () => {
+  const factoryReturning = (name: string, value: string) =>
+    installPackage(
+      name,
+      { type: "module", main: "./index.js" },
+      {
+        "index.js": `export default () => (${value});`,
+      },
+    );
+
+  it("names the package and the first missing renderer member", async () => {
+    factoryReturning("half-renderer", "{ inventory: [], compose: {} }");
+    await expect(loadPlugin("half-renderer", undefined, project, "renderer")).rejects.toThrow(
+      'plugin "half-renderer" returned a renderer without a function "form"; it is missing',
+    );
+  });
+
+  it("names a mistyped renderer member and what it got", async () => {
+    factoryReturning("bad-inventory", "{ inventory: {}, compose: {}, form() {}, fallback() {} }");
+    await expect(loadPlugin("bad-inventory", undefined, project, "renderer")).rejects.toThrow(
+      'plugin "bad-inventory" returned a renderer without an array "inventory"; got object',
+    );
+  });
+
+  it("refuses a renderer factory that returns a function, not an object", async () => {
+    factoryReturning("fn-renderer", "() => {}");
+    await expect(loadPlugin("fn-renderer", undefined, project, "renderer")).rejects.toThrow(
+      'plugin "fn-renderer" returned function, not a renderer object',
+    );
+  });
+
+  it("names a handler without wire", async () => {
+    factoryReturning("empty-handler", "{}");
+    await expect(loadPlugin("empty-handler", undefined, project, "handler")).rejects.toThrow(
+      'plugin "empty-handler" returned a handler without a function "wire"; it is missing',
+    );
+  });
+
+  it("fails in generateForm itself, before the engine runs", async () => {
+    factoryReturning("half-renderer", "{ inventory: [], compose: {} }");
+    const run = generateForm(z.object({ a: z.string() }), {
+      settings: { renderer: "half-renderer" },
+      from: project,
+    });
+    await expect(run).rejects.toThrow('plugin "half-renderer" returned a renderer without');
+  });
+
+  it("accepts a result with every member its role needs", async () => {
+    factoryReturning("ok-handler", "{ wire: (form) => form }");
+    const handler = await loadPlugin<{ wire: unknown }>(
+      "ok-handler",
+      undefined,
+      project,
+      "handler",
+    );
+    expect(typeof handler.wire).toBe("function");
   });
 });
 

@@ -77,15 +77,55 @@ export function checkSettings(raw: Record<string, unknown>, configPath: string):
   return settings;
 }
 
+type MemberKind = "array" | "object" | "function";
+
+// The members each plugin role must have, checked in this order (#259).
+const PLUGIN_SHAPES = {
+  renderer: [
+    ["inventory", "array"],
+    ["compose", "object"],
+    ["form", "function"],
+    ["fallback", "function"],
+  ],
+  handler: [["wire", "function"]],
+} as const satisfies Record<string, readonly (readonly [string, MemberKind])[]>;
+
+export type PluginRole = keyof typeof PLUGIN_SHAPES;
+
+const isKind = (value: unknown, kind: MemberKind): boolean =>
+  kind === "array"
+    ? Array.isArray(value)
+    : kind === "object"
+      ? typeof value === "object" && value !== null && !Array.isArray(value)
+      : typeof value === "function";
+
+/** What is wrong with a factory's result for its role, or undefined if nothing. */
+function shapeProblem(plugin: unknown, role: PluginRole): string | undefined {
+  if (typeof plugin !== "object" || plugin === null) {
+    return `returned ${plugin === null ? "null" : typeof plugin}, not a ${role} object`;
+  }
+  const members = plugin as Record<string, unknown>;
+  for (const [key, kind] of PLUGIN_SHAPES[role]) {
+    if (!isKind(members[key], kind)) {
+      const found = members[key] === undefined ? "it is missing" : `got ${typeof members[key]}`;
+      return `returned a ${role} without ${kind === "array" ? "an" : "a"} ${kind} "${key}"; ${found}`;
+    }
+  }
+  return undefined;
+}
+
 /**
  * The plugin load contract: resolve the named package from the PROJECT (where the
  * consumer installed it — the host depends on no particular plugin), import it,
- * and call its default-exported factory with the merged options.
+ * and call its default-exported factory with the merged options. Given a role,
+ * the factory's result is checked for that role's members, so a wrong shape
+ * fails here naming the package, not later inside the engine.
  */
 export async function loadPlugin<T>(
   pkg: string,
   options: Record<string, unknown> | undefined,
   from: string,
+  role?: PluginRole,
 ): Promise<T> {
   const url = resolvePlugin(pkg, from);
   let mod: { default?: unknown };
@@ -100,7 +140,10 @@ export async function loadPlugin<T>(
   if (typeof factory !== "function") {
     throw new Error(`plugin "${pkg}" must default-export a factory: (options) => plugin`);
   }
-  return (factory as PluginFactory<T>)(options);
+  const plugin = (factory as PluginFactory<T>)(options);
+  const problem = role ? shapeProblem(plugin, role) : undefined;
+  if (problem) throw new Error(`plugin "${pkg}" ${problem}`);
+  return plugin;
 }
 
 export interface FormResult {
@@ -141,6 +184,7 @@ export async function generateForm(
     settings.renderer,
     merge(settings["renderer.options"], options.rendererOptions),
     from,
+    "renderer",
   );
   // No handler named: the renderer's output is the form, unwired.
   const handler = settings.handler
@@ -148,6 +192,7 @@ export async function generateForm(
         settings.handler,
         merge(settings["handler.options"], options.handlerOptions),
         from,
+        "handler",
       )
     : undefined;
 
