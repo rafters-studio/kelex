@@ -126,6 +126,22 @@ describe("htmlRenderer -- default base-HTML leaf controls (#226)", () => {
     expect(html).not.toMatch(/\sclass=/);
   });
 
+  it("keeps id and for attributes intact when a key holds a quote or angle bracket (#258)", () => {
+    const key = 'a"b<c> d';
+    const html = render(
+      introspect(asSchema(z.object({ [key]: z.string(), [`${key}2`]: z.enum(["x", "y"]) })), OPTS),
+      htmlRenderer,
+    );
+    // Each id-bearing attribute holds an encoded id, optionally with the fixed
+    // -error / -label / option suffixes the renderer appends, and nothing else.
+    const values = [...html.matchAll(/\s(id|for|aria-describedby|aria-labelledby)="/g)].map(
+      (m) => html.slice((m.index ?? 0) + m[0].length).split('"')[0],
+    );
+    expect(values.length).toBeGreaterThan(0);
+    for (const value of values) expect(value).toMatch(/^[A-Za-z0-9_-]+$/);
+    expect(html).not.toContain('id="a"');
+  });
+
   it("passes conformance scoped to the leaf shapes", async () => {
     const names = (s: string) => [...s.matchAll(/name="([^"]+)"/g)].map((m) => m[1]);
     const report = await conformance(htmlRenderer, undefined, {

@@ -22,6 +22,25 @@ describe("pathToId -- injective, valid HTML id (#226)", () => {
     }
   });
 
+  it("stays [A-Za-z0-9_] and injective for any character, not just . * - _ (#258)", () => {
+    const alphabet = [..."aZ09_.*-\"'<> =&/\\:;`é", "😀", "\u0000"];
+    const paths = new Set<string>();
+    // Every string of up to three characters from the alphabet.
+    for (const a of ["", ...alphabet]) {
+      for (const b of ["", ...alphabet]) {
+        for (const c of alphabet) paths.add(a + b + c);
+      }
+    }
+    const ids = new Map<string, string>();
+    for (const path of paths) {
+      const id = pathToId(path);
+      expect(id, JSON.stringify(path)).toMatch(/^[A-Za-z0-9_]+$/);
+      const clash = ids.get(id);
+      expect(clash, `${JSON.stringify(path)} and ${JSON.stringify(clash)}`).toBeUndefined();
+      ids.set(id, path);
+    }
+  });
+
   it("keeps the literal path as `name` while `id` is the encoded form -- both key one control", () => {
     const key = "tags.*.label";
     // name is the raw path (the join key); id is its encoding.

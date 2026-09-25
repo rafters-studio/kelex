@@ -77,6 +77,31 @@ describe("postHandler -- async POST, native client validation, routing (#227)", 
     expect(JSON.parse(init.body as string)).toEqual({ name: "Ada", age: 42, agree: true });
   });
 
+  it("a key path through constructor.prototype leaves Object.prototype untouched (#258)", async () => {
+    const form = mount({
+      constructor: z.object({ prototype: z.object({ polluted: z.string() }) }),
+    });
+    const fetchMock = stubFetch();
+    const input = form.querySelector('[name="constructor.prototype.polluted"]') as HTMLInputElement;
+    input.value = "yes";
+    submit(form);
+    await flush();
+    expect(({} as Record<string, unknown>).polluted).toBeUndefined();
+    const body = JSON.parse((fetchMock.mock.calls[0] as [string, RequestInit])[1].body as string);
+    expect(body).toEqual({ constructor: { prototype: { polluted: "yes" } } });
+  });
+
+  it("a nested field under a key named constructor posts its value (#258)", async () => {
+    const form = mount({ constructor: z.object({ name: z.string() }), toString: z.string() });
+    const fetchMock = stubFetch();
+    (form.querySelector('[name="constructor.name"]') as HTMLInputElement).value = "Ada";
+    (form.querySelector('[name="toString"]') as HTMLInputElement).value = "x";
+    submit(form);
+    await flush();
+    const body = JSON.parse((fetchMock.mock.calls[0] as [string, RequestInit])[1].body as string);
+    expect(body).toEqual({ constructor: { name: "Ada" }, toString: "x" });
+  });
+
   it("gates the client with native validation -- an invalid required field blocks the POST", async () => {
     const form = mount({ name: z.string() });
     const fetchMock = stubFetch();
