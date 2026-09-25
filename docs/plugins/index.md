@@ -45,4 +45,4 @@ Name the pair in `kelex.settings.jsonc`:
 }
 ```
 
-Both keys are required today, so a project that wants markup and no wiring still names a handler.
+`handler` is optional. A project that wants markup and no wiring names only a renderer.

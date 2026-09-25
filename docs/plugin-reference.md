@@ -27,11 +27,11 @@ Resolution starts at the directory that holds the settings file, so run the CLI 
 | key                | required | what it holds                           |
 | ------------------ | -------- | --------------------------------------- |
 | `renderer`         | yes      | renderer package name                   |
-| `handler`          | yes      | handler package name                    |
+| `handler`          | no       | handler package name                    |
 | `renderer.options` | no       | defaults passed to the renderer factory |
 | `handler.options`  | no       | defaults passed to the handler factory  |
 
-Both plugin keys are required today even if your handler does nothing.
+Only `renderer` is required. Leave `handler` out and the form is the renderer's markup, unwired: static HTML with no script. A key with the wrong type fails when the settings load, naming the key.
 
 ## Renderer
 

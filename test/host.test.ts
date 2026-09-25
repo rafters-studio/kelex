@@ -41,8 +41,26 @@ describe("loadSettings", () => {
     expect(() => loadSettings(p)).toThrow(/CommaExpected at line 3, column 3/);
   });
 
-  it("rejects settings missing a plugin", () => {
-    const p = settingsFile(`{ "renderer": "@kelex/plugin-renderer-html" }`);
-    expect(() => loadSettings(p)).toThrow(/renderer.*handler.*required/);
+  it("loads settings that name only a renderer (#252)", () => {
+    const loaded = loadSettings(settingsFile(`{ "renderer": "@kelex/plugin-renderer-html" }`));
+    expect(loaded).toEqual({ renderer: "@kelex/plugin-renderer-html" });
+  });
+
+  it("names the missing renderer, not both keys, when neither is given (#252)", () => {
+    const p = settingsFile(`{ "renderer.options": { "action": "/x" } }`);
+    expect(() => loadSettings(p)).toThrow(/"renderer" must name a plugin package; it is missing$/);
+  });
+
+  it("names the key whose value has the wrong type (#252)", () => {
+    const cases: [string, RegExp][] = [
+      [`{ "renderer": 5 }`, /"renderer" must name a plugin package; got 5/],
+      [`{ "renderer": "  " }`, /"renderer" must name a plugin package; got "  "/],
+      [`{ "renderer": "r", "handler": false }`, /"handler" must name a plugin package; got false/],
+      [`{ "renderer": "r", "renderer.options": [] }`, /"renderer.options" must be an object/],
+      [`{ "renderer": "r", "handler.options": "x" }`, /"handler.options" must be an object/],
+    ];
+    for (const [text, message] of cases) {
+      expect(() => loadSettings(settingsFile(text)), text).toThrow(message);
+    }
   });
 });
