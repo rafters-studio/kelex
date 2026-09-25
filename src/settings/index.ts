@@ -14,10 +14,10 @@ export function loadSettings(configPath = DEFAULT_SETTINGS): KelexSettings {
   // Some editors save UTF-8 with a byte-order mark, which JSONC reports as an error.
   const raw = readFileSync(resolve(configPath), "utf8").replace(/^﻿/, "");
   const errors: ParseError[] = [];
-  const parsed = parseJsonc(raw, errors, {
+  const parsed: unknown = parseJsonc(raw, errors, {
     allowTrailingComma: true,
     disallowComments: false,
-  }) as KelexSettings | undefined;
+  });
   const [first] = errors;
   if (first) {
     const before = raw.slice(0, first.offset).split("\n");
@@ -27,13 +27,54 @@ export function loadSettings(configPath = DEFAULT_SETTINGS): KelexSettings {
         (errors.length > 1 ? ` (and ${errors.length - 1} more)` : ""),
     );
   }
-  if (!parsed || typeof parsed !== "object") {
+  if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) {
     throw new Error(`invalid ${configPath}: expected a settings object`);
   }
-  if (!parsed.renderer || !parsed.handler) {
-    throw new Error(`${configPath}: "renderer" and "handler" (plugin packages) are required`);
+  return checkSettings(parsed as Record<string, unknown>, configPath);
+}
+
+// The settings name the plugins and their options, and nothing else.
+const SETTINGS_KEYS = new Set(["renderer", "handler", "renderer.options", "handler.options"]);
+
+/**
+ * Check the parsed settings key by key and name the first problem. `renderer`
+ * is required; `handler` is optional (no handler leaves the form unwired); each
+ * present key must have its type; an unknown key, usually a typo, is refused
+ * rather than silently ignored.
+ */
+export function checkSettings(raw: Record<string, unknown>, configPath: string): KelexSettings {
+  const unknown = Object.keys(raw).find((key) => !SETTINGS_KEYS.has(key));
+  if (unknown !== undefined) {
+    throw new Error(
+      `${configPath}: unknown key "${unknown}"; settings hold only ${[...SETTINGS_KEYS].join(", ")}`,
+    );
   }
-  return parsed;
+  const packageName = (key: string, required: boolean): string | undefined => {
+    const value = raw[key];
+    if (value === undefined && !required) return undefined;
+    if (typeof value !== "string" || value.trim() === "") {
+      const found = value === undefined ? "it is missing" : `got ${JSON.stringify(value)}`;
+      throw new Error(`${configPath}: "${key}" must name a plugin package; ${found}`);
+    }
+    return value;
+  };
+  const options = (key: string): Record<string, unknown> | undefined => {
+    const value = raw[key];
+    if (value === undefined) return undefined;
+    if (typeof value !== "object" || value === null || Array.isArray(value)) {
+      throw new Error(`${configPath}: "${key}" must be an object of plugin options`);
+    }
+    return value as Record<string, unknown>;
+  };
+
+  const settings: KelexSettings = { renderer: packageName("renderer", true) as string };
+  const handler = packageName("handler", false);
+  if (handler !== undefined) settings.handler = handler;
+  const rendererOptions = options("renderer.options");
+  if (rendererOptions) settings["renderer.options"] = rendererOptions;
+  const handlerOptions = options("handler.options");
+  if (handlerOptions) settings["handler.options"] = handlerOptions;
+  return settings;
 }
 
 /**
@@ -83,7 +124,10 @@ export async function generateForm(
   options: GenerateOptions = {},
 ): Promise<FormResult> {
   const configPath = options.config ?? DEFAULT_SETTINGS;
-  const settings = options.settings ?? loadSettings(configPath);
+  // Settings passed as an object get the same checks as a file.
+  const settings = options.settings
+    ? checkSettings({ ...options.settings }, "settings")
+    : loadSettings(configPath);
   // Plugins are installed next to the settings file that names them. Settings
   // passed as an object have no file, so they resolve from the working directory.
   const from = options.from ?? (options.settings ? process.cwd() : dirname(resolve(configPath)));
@@ -98,11 +142,14 @@ export async function generateForm(
     merge(settings["renderer.options"], options.rendererOptions),
     from,
   );
-  const handler = await loadPlugin<Handler<unknown>>(
-    settings.handler,
-    merge(settings["handler.options"], options.handlerOptions),
-    from,
-  );
+  // No handler named: the renderer's output is the form, unwired.
+  const handler = settings.handler
+    ? await loadPlugin<Handler<unknown>>(
+        settings.handler,
+        merge(settings["handler.options"], options.handlerOptions),
+        from,
+      )
+    : undefined;
 
   const output = renderForm(descriptor, renderer, handler);
   return { output: String(output), fields: descriptor.fields.map((f) => f.name) };
