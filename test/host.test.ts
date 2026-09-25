@@ -2,7 +2,9 @@ import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
-import { loadSettings } from "../src";
+import { z } from "zod/v4";
+import { generateForm, loadSettings } from "../src";
+import type { KelexSettings } from "../src";
 
 let dir: string;
 beforeEach(() => {
@@ -49,6 +51,19 @@ describe("loadSettings", () => {
   it("names the missing renderer, not both keys, when neither is given (#252)", () => {
     const p = settingsFile(`{ "renderer.options": { "action": "/x" } }`);
     expect(() => loadSettings(p)).toThrow(/"renderer" must name a plugin package; it is missing$/);
+  });
+
+  it("refuses an unknown key instead of ignoring it (#252)", () => {
+    const p = settingsFile(`{ "renderer": "r", "rendrer.options": {} }`);
+    expect(() => loadSettings(p)).toThrow(/unknown key "rendrer.options"/);
+  });
+
+  it("checks settings passed as an object the same way as a file (#252)", async () => {
+    const schema = z.object({ a: z.string() });
+    const load = generateForm(schema, { settings: { handler: "h" } as unknown as KelexSettings });
+    await expect(load).rejects.toThrow(
+      /settings: "renderer" must name a plugin package; it is missing/,
+    );
   });
 
   it("names the key whose value has the wrong type (#252)", () => {

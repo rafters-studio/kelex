@@ -33,12 +33,22 @@ export function loadSettings(configPath = DEFAULT_SETTINGS): KelexSettings {
   return checkSettings(parsed as Record<string, unknown>, configPath);
 }
 
+// The settings name the plugins and their options, and nothing else.
+const SETTINGS_KEYS = new Set(["renderer", "handler", "renderer.options", "handler.options"]);
+
 /**
  * Check the parsed settings key by key and name the first problem. `renderer`
  * is required; `handler` is optional (no handler leaves the form unwired); each
- * present key must have its type.
+ * present key must have its type; an unknown key, usually a typo, is refused
+ * rather than silently ignored.
  */
-function checkSettings(raw: Record<string, unknown>, configPath: string): KelexSettings {
+export function checkSettings(raw: Record<string, unknown>, configPath: string): KelexSettings {
+  const unknown = Object.keys(raw).find((key) => !SETTINGS_KEYS.has(key));
+  if (unknown !== undefined) {
+    throw new Error(
+      `${configPath}: unknown key "${unknown}"; settings hold only ${[...SETTINGS_KEYS].join(", ")}`,
+    );
+  }
   const packageName = (key: string, required: boolean): string | undefined => {
     const value = raw[key];
     if (value === undefined && !required) return undefined;
@@ -114,7 +124,10 @@ export async function generateForm(
   options: GenerateOptions = {},
 ): Promise<FormResult> {
   const configPath = options.config ?? DEFAULT_SETTINGS;
-  const settings = options.settings ?? loadSettings(configPath);
+  // Settings passed as an object get the same checks as a file.
+  const settings = options.settings
+    ? checkSettings({ ...options.settings }, "settings")
+    : loadSettings(configPath);
   // Plugins are installed next to the settings file that names them. Settings
   // passed as an object have no file, so they resolve from the working directory.
   const from = options.from ?? (options.settings ? process.cwd() : dirname(resolve(configPath)));

@@ -167,7 +167,7 @@ Then name it in the settings:
 }
 ```
 
-The host requires both keys today, so a renderer-only project still has to name a handler. Use the default one if you have nothing to wire.
+`handler` is optional. A renderer-only project names only `renderer` and gets the renderer's markup, unwired.
 
 ## Writing a handler instead
 
