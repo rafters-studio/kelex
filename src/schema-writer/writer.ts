@@ -30,6 +30,17 @@ export function writeSchema(options: SchemaWriterOptions): SchemaWriterResult {
 }
 
 /**
+ * The schema's export name: the descriptor's own when the CLI recorded one,
+ * otherwise derived from the form name (`SignupForm` -> `signupSchema`), since a
+ * library caller may introspect a live schema that was never exported (#250).
+ */
+function exportNameOf(form: FormDescriptor): string {
+  if (form.schemaExportName) return form.schemaExportName;
+  const base = form.name.replace(/Form$/, "").replace(/[^A-Za-z0-9_$]/g, "") || "form";
+  return `${base.replace(/^./, (c) => c.toLowerCase())}Schema`;
+}
+
+/**
  * Infers TypeScript type name from schema export name.
  * userSchema -> User
  */
@@ -53,14 +64,15 @@ function emitSchemaDeclaration(form: FormDescriptor, warnings?: string[]): strin
     (field) => `  ${field.name}: ${emitField(field, warnings)},`,
   );
 
-  const typeName = inferTypeName(form.schemaExportName);
+  const exportName = exportNameOf(form);
+  const typeName = inferTypeName(exportName);
 
   return [
-    `export const ${form.schemaExportName} = z.object({`,
+    `export const ${exportName} = z.object({`,
     ...fieldEntries,
     "});",
     "",
-    `export type ${typeName} = z.infer<typeof ${form.schemaExportName}>;`,
+    `export type ${typeName} = z.infer<typeof ${exportName}>;`,
   ];
 }
 
@@ -103,7 +115,7 @@ function collectSchemaRefs(form: FormDescriptor): Set<string> {
  * Uses Kahn's algorithm. Throws on circular references.
  */
 function topologicalSort(schemas: EmbeddedSchema[]): EmbeddedSchema[] {
-  const names = schemas.map((s) => s.form.schemaExportName);
+  const names = schemas.map((s) => exportNameOf(s.form));
   const nameSet = new Set(names);
 
   // Build lookup tables: each name maps to its schema, adjacency list, and in-degree.
@@ -113,7 +125,7 @@ function topologicalSort(schemas: EmbeddedSchema[]): EmbeddedSchema[] {
   const inDegree = new Map<string, number>();
 
   for (const schema of schemas) {
-    const name = schema.form.schemaExportName;
+    const name = exportNameOf(schema.form);
     byName.set(name, schema);
     adj.set(name, []);
     inDegree.set(name, 0);
@@ -121,7 +133,7 @@ function topologicalSort(schemas: EmbeddedSchema[]): EmbeddedSchema[] {
 
   // Build edges: if schema A references schema B, B must come before A.
   for (const schema of schemas) {
-    const name = schema.form.schemaExportName;
+    const name = exportNameOf(schema.form);
     const refs = collectSchemaRefs(schema.form);
     for (const ref of refs) {
       if (nameSet.has(ref) && ref !== name) {
