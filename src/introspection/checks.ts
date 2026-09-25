@@ -183,3 +183,34 @@ export function extractConstraints(schema: $ZodType, unknownChecks?: string[]): 
 
   return constraints;
 }
+
+/** A value as the author wrote it: `5n` for a bigint, JSON for anything else. */
+function showValue(value: unknown): string {
+  if (typeof value === "bigint") return `${value}n`;
+  if (value instanceof Date) return value.toISOString();
+  return JSON.stringify(value) ?? String(value);
+}
+
+/**
+ * Describe every check on a schema in the author's terms (`>= 5n`, `multipleOf
+ * 2n`), for a field kelex cannot represent and so cannot enforce. Used to warn
+ * per dropped check rather than let bounds vanish under one type warning (#254).
+ */
+export function describeChecks(schema: $ZodType): string[] {
+  const checks = (schema._zod.def as { checks?: ZodCheck[] }).checks;
+  if (!Array.isArray(checks)) return [];
+  return checks.flatMap((check) => {
+    const def = check._zod?.def as (Omit<ZodCheckDef, "value"> & { value?: unknown }) | undefined;
+    if (!def) return [];
+    switch (def.check) {
+      case "greater_than":
+        return [`${def.inclusive ? ">=" : ">"} ${showValue(def.value)}`];
+      case "less_than":
+        return [`${def.inclusive ? "<=" : "<"} ${showValue(def.value)}`];
+      case "multiple_of":
+        return [`multipleOf ${showValue(def.value)}`];
+      default:
+        return [def.check];
+    }
+  });
+}
