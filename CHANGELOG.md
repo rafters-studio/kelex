@@ -1,6 +1,6 @@
 # kelex
 
-Releases are tag-driven: kelex, `@kelex/plugin-renderer-html` and `@kelex/plugin-handler-post` share one version, and a `vX.Y.Z` tag publishes all three. Entries before 0.2 were published as `@rafters-studio/kelex`.
+Releases are tag-driven: kelex, `@kelex/plugin-renderer-html` and `@kelex/plugin-handler-post` share one version, and a `vX.Y.Z` tag publishes all three. The entries below Unreleased were published as `@rafters-studio/kelex`.
 
 ## Unreleased
 
@@ -10,6 +10,7 @@ Releases are tag-driven: kelex, `@kelex/plugin-renderer-html` and `@kelex/plugin
 - **The React target is gone.** The composite JSON descriptor is the only built-in codegen target.
 - **Warnings are structured**: `{ path, code, message }`, with a stable `code` to switch on. Every code is documented in `docs/warnings.md`.
 - **`generateForm` is generic over the output type** and returns the renderer's output unchanged; the CLI refuses output that is not a string.
+- **`FormDescriptor.schemaImportPath` and `schemaExportName` are optional**, matching what `introspect` emits when called as a library. The schema-writer derives an export name from the form name when none is recorded, and refuses two schemas that would share an export or type name.
 - **Descriptor format version 2** adds `ref` fields for recursive schemas, `literal` as a field type, `minDate`/`maxDate`, `patternFlags`, and typed discriminator values.
 
 ### Added

@@ -8,6 +8,10 @@ on:
 
 permissions: {}
 
+concurrency:
+  group: release-${{ github.ref_name }}
+  cancel-in-progress: false
+
 jobs:
   release:
     runs-on: ubuntu-latest
@@ -23,15 +27,14 @@ jobs:
         with:
           version: 11.13.0
 
+      # Node 24 ships npm 11.6+, which publishes over OIDC trusted publishing.
+      # No registry-url: that writes an .npmrc expecting NODE_AUTH_TOKEN, which
+      # trusted publishing does not use. This matches rafters' release workflow.
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
           node-version: 24
           cache: pnpm
-          registry-url: "https://registry.npmjs.org"
-
-      - name: Install npm with trusted publishing (>= 11.5.1)
-        run: npm install -g npm@latest
 
       - name: Check the tag matches every package version
         env:
@@ -59,15 +62,24 @@ jobs:
           pnpm --filter @kelex/plugin-renderer-html pack --pack-destination "$PWD/.release"
           pnpm --filter @kelex/plugin-handler-post pack --pack-destination "$PWD/.release"
 
-      # kelex first: the plugins declare it as a peer.
+      # kelex first: the plugins declare it as a peer. A package already at this
+      # version is skipped, so re-running the tag after a partial publish finishes
+      # the rest instead of failing on the first one.
       - name: Publish to npm
         env:
           TAG: ${{ github.ref_name }}
         run: |
           version="${TAG#v}"
-          for name in kelex kelex-plugin-renderer-html kelex-plugin-handler-post; do
-            npm publish ".release/${name}-${version}.tgz" --access public --provenance
-          done
+          publish() {
+            if npm view "$1@$version" version >/dev/null 2>&1; then
+              echo "$1@$version is already published; skipping"
+            else
+              npm publish ".release/$2-$version.tgz" --access public --provenance
+            fi
+          }
+          publish kelex kelex
+          publish @kelex/plugin-renderer-html kelex-plugin-renderer-html
+          publish @kelex/plugin-handler-post kelex-plugin-handler-post
 
       - name: Create the GitHub Release
         env:

@@ -35,8 +35,15 @@ describe("the release version guard (#244)", () => {
 
   it("refuses a tag that is not v<major>.<minor>.<patch>", () => {
     packagesAt(["0.2.0", "0.2.0", "0.2.0"]);
-    expect(releaseProblems("0.2.0", root)).toEqual(['tag "0.2.0" is not v<major>.<minor>.<patch>']);
+    expect(releaseProblems("0.2.0", root)).toEqual([
+      'tag "0.2.0" is not v<major>.<minor>.<patch> (prereleases are not supported)',
+    ]);
     expect(releaseProblems("v0.2", root)).toHaveLength(1);
+  });
+
+  it("refuses a prerelease tag even when the versions match", () => {
+    packagesAt(["0.3.0-rc.1", "0.3.0-rc.1", "0.3.0-rc.1"]);
+    expect(releaseProblems("v0.3.0-rc.1", root)).toHaveLength(1);
   });
 
   it("checks the three packages that publish", () => {
