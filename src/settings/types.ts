@@ -22,7 +22,7 @@ export interface KelexSettings {
  * its options and returns the renderer/handler. The host imports the package
  * named in the settings and calls this.
  */
-export type PluginFactory<T> = (options?: Record<string, unknown>) => T;
+export type PluginFactory<T> = (options?: Record<string, unknown>) => T | Promise<T>;
 
 /** Per-run options passed to `generateForm` at call time — not baked in settings. */
 export interface GenerateOptions {

@@ -5,7 +5,7 @@ import { renderForm } from "../engine";
 import type { Handler, Renderer } from "../engine/types";
 import { introspect } from "../introspection";
 import { factoryOf, messageOf, resolvePlugin } from "./resolve-plugin";
-import type { GenerateOptions, KelexSettings } from "./types";
+import type { GenerateOptions, KelexSettings, PluginFactory } from "./types";
 
 const DEFAULT_SETTINGS = "kelex.settings.jsonc";
 
@@ -92,30 +92,32 @@ const PLUGIN_SHAPES = {
 
 export type PluginRole = keyof typeof PLUGIN_SHAPES;
 
-// A plain object: the engine reads members by key, so a Map or a class instance
-// with the right entries still fails there.
-const isPlainObject = (value: unknown): boolean => {
-  if (typeof value !== "object" || value === null) return false;
-  const proto: unknown = Object.getPrototypeOf(value);
-  return proto === Object.prototype || proto === null;
-};
+// An object the engine can read by key. The engine uses compose[name], so a
+// plain object or a class instance works, but a Map or Set holds its entries
+// where bracket access cannot see them and every field would fall back.
+const isKeyedObject = (value: unknown): boolean =>
+  typeof value === "object" &&
+  value !== null &&
+  !Array.isArray(value) &&
+  !(value instanceof Map) &&
+  !(value instanceof Set);
 
 const isKind = (value: unknown, kind: MemberKind): boolean =>
   kind === "array"
     ? Array.isArray(value)
     : kind === "object"
-      ? isPlainObject(value)
+      ? isKeyedObject(value)
       : typeof value === "function";
 
 /** What a value is, in words: null and arrays are named, not reported as "object". */
-const describe = (value: unknown): string =>
-  value === null
-    ? "null"
-    : Array.isArray(value)
-      ? "an array"
-      : value instanceof Map
-        ? "a Map"
-        : typeof value;
+const describe = (value: unknown): string => {
+  if (value === null) return "null";
+  if (Array.isArray(value)) return "an array";
+  if (value instanceof Map) return "a Map";
+  if (value instanceof Set) return "a Set";
+  const kind = typeof value;
+  return `${kind === "object" || kind === "undefined" ? "an" : "a"} ${kind}`;
+};
 
 /** What is wrong with a factory's result for its role, or undefined if nothing. */
 function shapeProblem(plugin: unknown, role: PluginRole): string | undefined {
@@ -127,7 +129,7 @@ function shapeProblem(plugin: unknown, role: PluginRole): string | undefined {
     if (!isKind(members[key], kind)) {
       const found = members[key] === undefined ? "it is missing" : `got ${describe(members[key])}`;
       const wanted =
-        kind === "function" ? "a function" : kind === "array" ? "an array" : "a plain object";
+        kind === "function" ? "a function" : kind === "array" ? "an array" : "an object";
       return `returned a ${role} without ${wanted} "${key}"; ${found}`;
     }
   }
@@ -161,9 +163,13 @@ export async function loadPlugin<T>(
     throw new Error(`plugin "${pkg}" must default-export a factory: (options) => plugin`);
   }
   // A factory may be async; await it so its result, not a Promise, is checked.
-  const plugin: unknown = await (factory as (options?: Record<string, unknown>) => unknown)(
-    options,
-  );
+  // A throw or rejection names the plugin, like every other load failure.
+  let plugin: unknown;
+  try {
+    plugin = await (factory as PluginFactory<unknown>)(options);
+  } catch (error) {
+    throw new Error(`plugin "${pkg}" factory failed: ${messageOf(error)}`, { cause: error });
+  }
   const problem = role ? shapeProblem(plugin, role) : undefined;
   if (problem) throw new Error(`plugin "${pkg}" ${problem}`);
   return plugin as T;

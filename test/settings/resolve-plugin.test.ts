@@ -114,14 +114,14 @@ describe("loadPlugin -- a factory's result must fit the role it fills (#259)", (
   it("names a mistyped renderer member and what it got", async () => {
     factoryReturning("bad-inventory", "{ inventory: {}, compose: {}, form() {}, fallback() {} }");
     await expect(loadPlugin("bad-inventory", undefined, project, "renderer")).rejects.toThrow(
-      'plugin "bad-inventory" returned a renderer without an array "inventory"; got object',
+      'plugin "bad-inventory" returned a renderer without an array "inventory"; got an object',
     );
   });
 
   it("refuses a renderer factory that returns a function, not an object", async () => {
     factoryReturning("fn-renderer", "() => {}");
     await expect(loadPlugin("fn-renderer", undefined, project, "renderer")).rejects.toThrow(
-      'plugin "fn-renderer" returned function, not a renderer object',
+      'plugin "fn-renderer" returned a function, not a renderer object',
     );
   });
 
@@ -141,24 +141,62 @@ describe("loadPlugin -- a factory's result must fit the role it fills (#259)", (
     await expect(run).rejects.toThrow('plugin "half-renderer" returned a renderer without');
   });
 
-  it("says a Map is not the plain object compose must be", async () => {
+  it("refuses a Map for compose, whose entries the engine cannot read by key", async () => {
     factoryReturning(
       "map-compose",
       "{ inventory: [], compose: new Map(), form() {}, fallback() {} }",
     );
     await expect(loadPlugin("map-compose", undefined, project, "renderer")).rejects.toThrow(
-      'plugin "map-compose" returned a renderer without a plain object "compose"; got a Map',
+      'plugin "map-compose" returned a renderer without an object "compose"; got a Map',
     );
   });
 
   it("names null and arrays as themselves, not as object", async () => {
     factoryReturning("null-compose", "{ inventory: [], compose: null, form() {}, fallback() {} }");
     await expect(loadPlugin("null-compose", undefined, project, "renderer")).rejects.toThrow(
-      'without a plain object "compose"; got null',
+      'without an object "compose"; got null',
     );
     factoryReturning("array-compose", "{ inventory: [], compose: [], form() {}, fallback() {} }");
     await expect(loadPlugin("array-compose", undefined, project, "renderer")).rejects.toThrow(
-      'without a plain object "compose"; got an array',
+      'without an object "compose"; got an array',
+    );
+  });
+
+  it("accepts compose as a class instance or a null-prototype object", async () => {
+    factoryReturning(
+      "class-compose",
+      "{ inventory: [], compose: new (class { field() {} })(), form() {}, fallback() {} }",
+    );
+    factoryReturning(
+      "bare-compose",
+      "{ inventory: [], compose: Object.create(null), form() {}, fallback() {} }",
+    );
+    for (const name of ["class-compose", "bare-compose"]) {
+      const renderer = await loadPlugin<{ compose: unknown }>(name, undefined, project, "renderer");
+      expect(typeof renderer.compose).toBe("object");
+    }
+  });
+
+  it("names the plugin when its factory throws or rejects", async () => {
+    installPackage(
+      "throwing",
+      { type: "module", main: "./index.js" },
+      {
+        "index.js": "export default () => { throw new Error('boom'); };",
+      },
+    );
+    installPackage(
+      "rejecting",
+      { type: "module", main: "./index.js" },
+      {
+        "index.js": "export default async () => { throw new Error('later boom'); };",
+      },
+    );
+    const sync = loadPlugin("throwing", undefined, project, "renderer");
+    await expect(sync).rejects.toThrow('plugin "throwing" factory failed: boom');
+    await expect(sync).rejects.toHaveProperty("cause");
+    await expect(loadPlugin("rejecting", undefined, project, "renderer")).rejects.toThrow(
+      'plugin "rejecting" factory failed: later boom',
     );
   });
 
