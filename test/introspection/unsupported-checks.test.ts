@@ -52,9 +52,21 @@ describe("checks on a field that falls back to a string (#254)", () => {
     expect(file[0]).toContain('"min size 1"');
     expect(file[1]).toContain('"max size 10"');
     expect(file[2]).toContain('"mime image/png"');
-    const set = warningsFor(z.set(z.string()).min(1).max(5)).map(([, message]) => message);
-    expect(set.some((m) => m.includes('"min size 1"'))).toBe(true);
-    expect(set.some((m) => m.includes('"max size 5"'))).toBe(true);
+    const set = warningsFor(z.set(z.string()).min(1).max(5))
+      .filter(([code]) => code === "check-dropped")
+      .map(([, message]) => message);
+    expect(set).toHaveLength(2);
+    expect(set[0]).toContain('"min size 1"');
+    expect(set[1]).toContain('"max size 5"');
+    const [, size] = warningsFor(z.map(z.string(), z.number()).size(2));
+    expect(size[1]).toContain('"size 2"');
+  });
+
+  it("reports the predicate of z.custom(), and a refine on a set, as refine-unrepresented", () => {
+    const custom = warningsFor(z.custom<{ foo: string }>((v) => typeof v === "object"));
+    expect(custom.map(([code]) => code)).toEqual(["unsupported-type", "refine-unrepresented"]);
+    const set = warningsFor(z.set(z.string()).refine((s) => s.size > 0));
+    expect(set.map(([code]) => code)).toEqual(["unsupported-type", "refine-unrepresented"]);
   });
 
   it("emits only the type warning for a bigint with no checks", () => {

@@ -211,6 +211,8 @@ function describeCheck(def: Record<string, unknown>): string {
       return has("minimum") ? `min size ${showValue(def.minimum)}` : kind;
     case "max_size":
       return has("maximum") ? `max size ${showValue(def.maximum)}` : kind;
+    case "size_equals":
+      return has("size") ? `size ${showValue(def.size)}` : kind;
     case "mime_type":
       return Array.isArray(def.mime) ? `mime ${def.mime.join(", ")}` : kind;
     default:
@@ -221,14 +223,16 @@ function describeCheck(def: Record<string, unknown>): string {
 /**
  * Describe the constraints on a schema kelex cannot represent, in the author's
  * terms (`>= 5n`, `max size 10`, the implied range of `z.uint64()`), so each can
- * be warned about rather than vanish under one type warning (#254). A refine
- * comes back as its kind, `custom`, for the caller to report as a refine.
+ * be warned about rather than vanish under one type warning (#254). A refine,
+ * and the predicate of a `z.custom()` (which lives on the def, not in its
+ * checks), come back as `custom`, for the caller to report as a refine.
  */
 export function describeChecks(schema: $ZodType): string[] {
   const def = schema._zod.def as { type: string; format?: string; checks?: ZodCheck[] };
   const out: string[] = [];
   const range = def.type === "bigint" && def.format ? BIGINT_FORMAT_RANGES[def.format] : undefined;
   if (range) out.push(`${def.format}: >= ${range[0]}n and <= ${range[1]}n`);
+  if (def.type === "custom") out.push("custom");
   for (const check of Array.isArray(def.checks) ? def.checks : []) {
     const checkDef = check._zod?.def as Record<string, unknown> | undefined;
     if (checkDef) out.push(describeCheck(checkDef));
