@@ -1,22 +1,23 @@
 name: Release
 
+# A vX.Y.Z tag publishes kelex and both default plugins at that version, with
+# npm provenance, and cuts a GitHub Release. The three packages release together.
 on:
   push:
-    branches: [main]
+    tags: ["v*"]
+
+permissions: {}
 
 concurrency:
-  group: ${{ github.workflow }}-${{ github.ref }}
-  cancel-in-progress: true
+  group: release
+  cancel-in-progress: false
 
 jobs:
-  version:
-    name: Version
+  release:
     runs-on: ubuntu-latest
     permissions:
-      contents: write
-      pull-requests: write
-    outputs:
-      hasChangesets: ${{ steps.changesets.outputs.hasChangesets }}
+      contents: write # the GitHub Release
+      id-token: write # npm trusted publishing and provenance
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -26,49 +27,20 @@ jobs:
         with:
           version: 11.13.0
 
+      # node-version 24 resolves to the latest 24.x, whose npm is well above 11.5.1,
+      # the first to publish over OIDC trusted publishing.
+      # No registry-url: that writes an .npmrc expecting NODE_AUTH_TOKEN, which
+      # trusted publishing does not use. This matches rafters' release workflow.
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
           node-version: 24
           cache: pnpm
 
-      - name: Install dependencies
-        run: pnpm install --frozen-lockfile
-
-      - name: Create release PR or detect merged version
-        id: changesets
-        uses: changesets/action@v1
-        with:
-          title: "chore: version packages"
-          commit: "chore: version packages"
+      - name: Check the tag matches every package version
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
-  publish:
-    name: Publish
-    needs: version
-    if: needs.version.outputs.hasChangesets == 'false'
-    runs-on: ubuntu-latest
-    permissions:
-      contents: read
-      id-token: write
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      - name: Setup pnpm
-        uses: pnpm/action-setup@v4
-        with:
-          version: 11.13.0
-
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: 24
-          registry-url: "https://registry.npmjs.org"
-
-      - name: Install latest npm (>=11.5.1 for OIDC)
-        run: npm install -g npm@latest
+          TAG: ${{ github.ref_name }}
+        run: node scripts/check-release-version.mjs "$TAG"
 
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
@@ -76,8 +48,42 @@ jobs:
       - name: Build
         run: pnpm build
 
+      - name: Type check
+        run: pnpm typecheck
+
       - name: Test (full suite including specs)
         run: pnpm test:all
 
+      # pnpm pack rewrites the plugins' workspace:^ peer range on kelex to the
+      # real version; npm publish then publishes the packed tarballs.
+      - name: Pack
+        run: |
+          mkdir -p .release
+          pnpm pack --pack-destination "$PWD/.release"
+          pnpm --filter @kelex/plugin-renderer-html pack --pack-destination "$PWD/.release"
+          pnpm --filter @kelex/plugin-handler-post pack --pack-destination "$PWD/.release"
+
+      # kelex first: the plugins declare it as a peer. A package already at this
+      # version is skipped, so re-running the tag after a partial publish finishes
+      # the rest instead of failing on the first one.
       - name: Publish to npm
-        run: npm publish --access public
+        env:
+          TAG: ${{ github.ref_name }}
+        run: |
+          version="${TAG#v}"
+          publish() {
+            if npm view "$1@$version" version >/dev/null 2>&1; then
+              echo "$1@$version is already published; skipping"
+            else
+              npm publish ".release/$2-$version.tgz" --access public --provenance
+            fi
+          }
+          publish kelex kelex
+          publish @kelex/plugin-renderer-html kelex-plugin-renderer-html
+          publish @kelex/plugin-handler-post kelex-plugin-handler-post
+
+      - name: Create the GitHub Release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ github.ref_name }}
+        run: gh release create "$TAG" --generate-notes
