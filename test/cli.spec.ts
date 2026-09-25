@@ -107,6 +107,54 @@ describe("CLI", () => {
     });
   });
 
+  describe("form command", () => {
+    const schemaPath = path.join(FIXTURES_PATH, "user-schema.ts");
+    const settingsPath = path.resolve(__dirname, "../kelex.settings.jsonc");
+
+    it("generates a wired form from the plugins the settings name", () => {
+      const outputPath = path.join(TEST_OUTPUT_DIR, "user.html");
+
+      const result = runCli(["form", schemaPath, "-e", "userSchema", "-o", outputPath]);
+
+      expect(result).toContain("Generated");
+      expect(result).toContain("@kelex/plugin-renderer-html + @kelex/plugin-handler-post");
+      const html = fs.readFileSync(outputPath, "utf-8");
+      expect(html.startsWith("<form")).toBe(true);
+      expect(html).toContain('action="/api/submit"'); // renderer.options from the settings
+      expect(html).toContain("<script>"); // the handler wired it
+    });
+
+    it("is the default command, and -a overrides the settings' action", () => {
+      const outputPath = path.join(TEST_OUTPUT_DIR, "user-action.html");
+
+      runCli([schemaPath, "-e", "userSchema", "-o", outputPath, "-a", "/override"]);
+
+      const html = fs.readFileSync(outputPath, "utf-8");
+      expect(html).toContain('action="/override"');
+      expect(html).not.toContain('action="/api/submit"');
+    });
+
+    it("loads the handler a flag names instead of the settings' handler", () => {
+      const outputPath = path.join(TEST_OUTPUT_DIR, "user-handler.html");
+
+      const { stderr } = runCliWithError([
+        "form",
+        schemaPath,
+        "-e",
+        "userSchema",
+        "-c",
+        settingsPath,
+        "-o",
+        outputPath,
+        "-H",
+        "@kelex/no-such-handler",
+      ]);
+
+      expect(stderr).toContain('cannot resolve plugin "@kelex/no-such-handler"');
+      expect(fs.existsSync(outputPath)).toBe(false);
+    });
+  });
+
   describe("targets command", () => {
     it("lists available targets", () => {
       const result = runCli(["targets"]);
