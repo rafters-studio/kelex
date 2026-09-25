@@ -65,3 +65,80 @@ describe("recursive schema ref nodes (#214)", () => {
     expect(introspect(z.object({ a: z.string() }), OPTS).formatVersion).toBeGreaterThanOrEqual(2);
   });
 });
+
+describe("recursion spelled with getters, the Zod 4 idiom (#251)", () => {
+  // Walks a field tree and returns [dotted path, target] for every ref node.
+  const refsOf = (fields: readonly unknown[], prefix = ""): [string, unknown][] => {
+    const out: [string, unknown][] = [];
+    for (const raw of fields) {
+      const f = raw as { name: string; type: string; metadata: Record<string, unknown> };
+      const here = prefix ? `${prefix}.${f.name}` : f.name;
+      if (f.type === "ref") out.push([here, f.metadata.target]);
+      const m = f.metadata;
+      if (Array.isArray(m.fields)) out.push(...refsOf(m.fields, here));
+      if (m.element) out.push(...refsOf([m.element], here));
+    }
+    return out;
+  };
+
+  const getterNode = () => {
+    const Node = z.object({
+      name: z.string(),
+      get kids() {
+        return z.array(Node);
+      },
+    });
+    return Node;
+  };
+
+  it("emits a ref to the ancestor instead of overflowing the stack", () => {
+    const d = introspect(z.object({ root: getterNode() }), OPTS);
+    expect(refsOf(d.fields)).toEqual([["root.kids.item", ["root"]]]);
+    expect(d.warnings.some((w) => w.code === "unsupported-type")).toBe(false);
+  });
+
+  it("produces the same descriptor as the z.lazy spelling of the same schema", () => {
+    const LazyNode: z.ZodType = z.object({
+      name: z.string(),
+      kids: z.array(z.lazy(() => LazyNode)),
+    });
+    const viaGetter = introspect(z.object({ root: getterNode() }), OPTS);
+    const viaLazy = introspect(z.object({ root: LazyNode }), OPTS);
+    expect(viaGetter.fields).toEqual(viaLazy.fields);
+    expect(viaGetter.version).toBe(viaLazy.version);
+  });
+
+  it("terminates on mutual recursion between two getter-recursive objects", () => {
+    const A = z.object({
+      a: z.string(),
+      get b() {
+        return B.optional();
+      },
+    });
+    const B = z.object({
+      b: z.number(),
+      get a() {
+        return A.optional();
+      },
+    });
+    const d = introspect(z.object({ root: A }), OPTS);
+    expect(refsOf(d.fields)).toEqual([["root.b.a", ["root"]]]);
+  });
+
+  it("closes a cycle through a union with no z.lazy anywhere", () => {
+    const Expr = z.object({
+      get value() {
+        return z.union([z.number(), Expr]);
+      },
+    });
+    const d = introspect(z.object({ root: Expr }), OPTS);
+    expect(JSON.stringify(d.fields)).toContain('"kind":"ref"');
+  });
+
+  it("keys on the path, not the schema: a sibling reusing one schema still expands", () => {
+    const Address = z.object({ street: z.string() });
+    const d = introspect(z.object({ home: Address, work: Address }), OPTS);
+    expect(d.fields.map((f) => f.type)).toEqual(["object", "object"]);
+    expect(refsOf(d.fields)).toEqual([]);
+  });
+});
