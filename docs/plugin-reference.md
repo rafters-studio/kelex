@@ -13,7 +13,7 @@ import type { Renderer, Handler, Composer, Input, Entry, Control } from "kelex/e
 A plugin package default-exports a factory:
 
 ```typescript
-type PluginFactory<T> = (options?: Record<string, unknown>) => T;
+type PluginFactory<T> = (options?: Record<string, unknown>) => T | Promise<T>;
 ```
 
 The host reads the package name from `kelex.settings.jsonc`, resolves it from your project rather than from kelex, imports it, and calls the factory with the merged options. Settings options come first and per-run options override them.
@@ -22,7 +22,7 @@ Resolution starts at the directory that holds the settings file, so run the CLI 
 
 `renderer` and `handler` name packages (`name` or `@scope/name`), not file paths. A plugin can ship as ESM or CommonJS. kelex reads an `exports` map the way Node does for `import()`, taking the first of `import`, `node`, or `default` in the package's own key order. If the whole map has no target for those, kelex reads it again with `require` too, so a package that exports only a CommonJS entry still loads. That is the one place kelex is looser than a bare `import()`. Without `exports`, `main` gets Node's CommonJS lookup, so `lib/index` and a directory both work. A TypeScript-compiled CommonJS default export (`exports.default = factory`) loads too.
 
-The host checks what the factory returns before using it. A renderer needs `inventory` (an array), `compose` (an object), and `form` and `fallback` (functions); a handler needs `wire` (a function). A missing or mistyped member fails at load time, naming the package and the member.
+The host checks what the factory returns before using it. A renderer needs `inventory` (an array), `compose` (an object), and `form` and `fallback` (functions); a handler needs `wire` (a function). A missing or mistyped member fails at load time, naming the package and the member. The factory may be async; kelex awaits it, and a factory that throws or rejects fails naming the package.
 
 ## Settings keys
 

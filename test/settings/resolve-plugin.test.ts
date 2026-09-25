@@ -162,6 +162,30 @@ describe("loadPlugin -- a factory's result must fit the role it fills (#259)", (
     );
   });
 
+  it("refuses a Promise or a WeakMap for compose, and says to await a Promise", async () => {
+    factoryReturning(
+      "promise-compose",
+      "{ inventory: [], compose: Promise.resolve({}), form() {}, fallback() {} }",
+    );
+    await expect(loadPlugin("promise-compose", undefined, project, "renderer")).rejects.toThrow(
+      'without an object "compose"; got a Promise (await it in the factory)',
+    );
+    factoryReturning(
+      "weak-compose",
+      "{ inventory: [], compose: new WeakMap(), form() {}, fallback() {} }",
+    );
+    await expect(loadPlugin("weak-compose", undefined, project, "renderer")).rejects.toThrow(
+      'without an object "compose"; got a WeakMap',
+    );
+  });
+
+  it("says undefined, not an undefined, when a factory returns nothing", async () => {
+    factoryReturning("empty-return", "undefined");
+    await expect(loadPlugin("empty-return", undefined, project, "renderer")).rejects.toThrow(
+      'plugin "empty-return" returned undefined, not a renderer object',
+    );
+  });
+
   it("accepts compose as a class instance or a null-prototype object", async () => {
     factoryReturning(
       "class-compose",

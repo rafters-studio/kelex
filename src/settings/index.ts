@@ -100,7 +100,14 @@ const isKeyedObject = (value: unknown): boolean =>
   value !== null &&
   !Array.isArray(value) &&
   !(value instanceof Map) &&
-  !(value instanceof Set);
+  !(value instanceof Set) &&
+  !(value instanceof WeakMap) &&
+  !(value instanceof WeakSet) &&
+  !isThenable(value);
+
+// A Promise (or any thenable) where an object belongs usually means a missed await.
+const isThenable = (value: object): boolean =>
+  typeof (value as { then?: unknown }).then === "function";
 
 const isKind = (value: unknown, kind: MemberKind): boolean =>
   kind === "array"
@@ -115,6 +122,10 @@ const describe = (value: unknown): string => {
   if (Array.isArray(value)) return "an array";
   if (value instanceof Map) return "a Map";
   if (value instanceof Set) return "a Set";
+  if (value instanceof WeakMap) return "a WeakMap";
+  if (value instanceof WeakSet) return "a WeakSet";
+  if (value === undefined) return "undefined";
+  if (typeof value === "object" && isThenable(value)) return "a Promise (await it in the factory)";
   const kind = typeof value;
   return `${kind === "object" || kind === "undefined" ? "an" : "a"} ${kind}`;
 };
