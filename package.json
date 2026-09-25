@@ -53,7 +53,7 @@
   "scripts": {
     "build": "tsdown && pnpm -r --filter=\"./packages/*\" build",
     "dev": "tsdown --watch",
-    "typecheck": "tsc --noEmit && pnpm -r --filter=\"./packages/*\" typecheck",
+    "typecheck": "tsc --noEmit && tsc -p tsconfig.types.json && pnpm -r --filter=\"./packages/*\" typecheck",
     "test": "vitest run --exclude '**/*.spec.ts' && pnpm -r --filter=\"./packages/*\" test",
     "test:unit": "vitest run --exclude '**/*.spec.ts' && pnpm -r --filter=\"./packages/*\" test:unit",
     "test:all": "vitest run && pnpm -r --filter=\"./packages/*\" test:all",

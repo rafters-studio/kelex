@@ -37,7 +37,9 @@ export function writeSchema(options: SchemaWriterOptions): SchemaWriterResult {
 function exportNameOf(form: FormDescriptor): string {
   if (form.schemaExportName) return form.schemaExportName;
   const base = form.name.replace(/Form$/, "").replace(/[^A-Za-z0-9_$]/g, "") || "form";
-  return `${base.replace(/^./, (c) => c.toLowerCase())}Schema`;
+  const name = `${base.replace(/^./, (c) => c.toLowerCase())}Schema`;
+  // An identifier cannot start with a digit: "1Form" becomes "_1Schema".
+  return /^[0-9]/.test(name) ? `_${name}` : name;
 }
 
 /**
@@ -51,7 +53,8 @@ function inferTypeName(schemaExportName: string): string {
     return "Schema";
   }
 
-  return stripped.replace(/^./, (s) => s.toUpperCase());
+  const typeName = stripped.replace(/^./, (s) => s.toUpperCase());
+  return /^[0-9]/.test(typeName) ? `_${typeName}` : typeName;
 }
 
 /**
@@ -117,6 +120,15 @@ function collectSchemaRefs(form: FormDescriptor): Set<string> {
 function topologicalSort(schemas: EmbeddedSchema[]): EmbeddedSchema[] {
   const names = schemas.map((s) => exportNameOf(s.form));
   const nameSet = new Set(names);
+  // Two schemas under one export name would overwrite each other here and emit
+  // one declaration twice; name the clash instead.
+  if (nameSet.size !== names.length) {
+    const clash = names.find((name, i) => names.indexOf(name) !== i);
+    throw new Error(
+      `Two embedded schemas share the export name "${clash}". ` +
+        "Give each form a distinct name or schemaExportName.",
+    );
+  }
 
   // Build lookup tables: each name maps to its schema, adjacency list, and in-degree.
   // All entries are initialized here, so subsequent .get() calls are guaranteed non-undefined.

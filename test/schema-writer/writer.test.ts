@@ -596,4 +596,30 @@ describe("writeSchema", () => {
       expect(result.code).toBe(expected);
     });
   });
+
+  describe("a descriptor with no schemaExportName (#250)", () => {
+    const named = (name: string) =>
+      makeForm({ name, schemaExportName: undefined, fields: [makeField({ name: "a" })] });
+
+    it("derives the export and type names from the form name", () => {
+      const { code } = writeSchema({ form: named("SignupForm") });
+      expect(code).toContain("export const signupSchema = z.object({");
+      expect(code).toContain("export type Signup = z.infer<typeof signupSchema>;");
+    });
+
+    it("never derives an identifier that starts with a digit", () => {
+      const { code } = writeSchema({ form: named("1Form") });
+      expect(code).toContain("export const _1Schema = z.object({");
+      expect(code).toContain("export type _1 = z.infer<typeof _1Schema>;");
+    });
+
+    it("refuses two embedded schemas that would share one export name", () => {
+      const run = () =>
+        writeSchema({
+          form: named("OrderForm"),
+          embeddedSchemas: [{ form: named("AddressForm") }, { form: named("AddressForm") }],
+        });
+      expect(run).toThrow(/share the export name "addressSchema"/);
+    });
+  });
 });

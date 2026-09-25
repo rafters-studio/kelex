@@ -1,7 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { z } from "zod/v4";
 import { introspect } from "../../src/introspection";
-import { writeSchema } from "../../src/schema-writer/writer";
 import { compositeTarget } from "../../src/targets";
 
 const schema = z.object({ email: z.email() });
@@ -25,12 +24,5 @@ describe("library-mode introspect, with no import path or export name (#250)", (
     const artifact = JSON.parse(compositeTarget.generate(descriptor, {}).files[0].content);
     expect(artifact.schemaImportPath).toBe("./signup");
     expect(artifact.schemaExportName).toBe("signupSchema");
-  });
-
-  it("lets the schema-writer derive an export name from the form name", () => {
-    const { code } = writeSchema({ form: introspect(schema, { formName: "SignupForm" }) });
-    expect(code).toContain("export const signupSchema = z.object({");
-    expect(code).toContain("export type Signup = z.infer<typeof signupSchema>;");
-    expect(code).not.toContain("undefined");
   });
 });
