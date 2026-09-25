@@ -5,6 +5,7 @@ import { createRequire } from "node:module";
 import * as path from "node:path";
 import { pathToFileURL } from "node:url";
 import { Command } from "commander";
+import type { $ZodType } from "zod/v4/core";
 import { generate } from "./codegen/generator";
 import { generateForm, loadSettings, writeForm } from "./settings";
 import type { KelexSettings } from "./settings/types";
@@ -94,16 +95,7 @@ async function runForm(schemaPath: string, options: FormCommandOptions): Promise
   if (options.renderer) settings.renderer = options.renderer;
   if (options.handler) settings.handler = options.handler;
 
-  const absoluteSchemaPath = path.resolve(schemaPath);
-  if (!fs.existsSync(absoluteSchemaPath)) {
-    throw new Error(`Schema file not found: ${absoluteSchemaPath}`);
-  }
-  const schemaModule = await import(pathToFileURL(absoluteSchemaPath).href);
-  const schema = schemaModule[options.export] ?? schemaModule.default;
-  if (!schema?._zod) {
-    throw new Error(`Export "${options.export}" is not a Zod schema in ${schemaPath} (zod >= 4)`);
-  }
-
+  const schema = await importSchema(schemaPath, options.export);
   const { output, fields } = await generateForm(schema, {
     settings,
     formName: deriveFormName(options.export),
@@ -117,30 +109,35 @@ async function runForm(schemaPath: string, options: FormCommandOptions): Promise
   console.log(`  ${fields.length} fields: ${fields.join(", ")}`);
 }
 
-async function runGenerate(schemaPath: string, options: GenerateCommandOptions): Promise<void> {
+/**
+ * Import a schema module and return the named export (or the default), checked
+ * to be a live Zod 4 schema. Both commands read their schema through this.
+ */
+async function importSchema(schemaPath: string, exportName: string): Promise<$ZodType> {
   const absoluteSchemaPath = path.resolve(schemaPath);
-
   if (!fs.existsSync(absoluteSchemaPath)) {
     throw new Error(`Schema file not found: ${absoluteSchemaPath}`);
   }
-
-  const target = resolveTarget(options.target);
-
-  const schemaUrl = pathToFileURL(absoluteSchemaPath).href;
-  const schemaModule = await import(schemaUrl);
-
-  const schemaExportName = options.schema;
-  const schema = schemaModule[schemaExportName] ?? schemaModule.default;
-
-  if (!schema) {
-    throw new Error(`Schema "${schemaExportName}" not exported from ${schemaPath}`);
+  const schemaModule: Record<string, unknown> = await import(
+    pathToFileURL(absoluteSchemaPath).href
+  );
+  const schema = schemaModule[exportName] ?? schemaModule.default;
+  if (schema === undefined) {
+    throw new Error(`Schema "${exportName}" not exported from ${schemaPath}`);
   }
-
-  if (!schema._zod) {
+  if (typeof schema !== "object" || schema === null || !("_zod" in schema)) {
     throw new Error(
-      `Export "${schemaExportName}" is not a Zod schema. Ensure you are using zod >= 4.0.0`,
+      `Export "${exportName}" is not a Zod schema. Ensure you are using zod >= 4.0.0`,
     );
   }
+  return schema as $ZodType;
+}
+
+async function runGenerate(schemaPath: string, options: GenerateCommandOptions): Promise<void> {
+  const schemaExportName = options.schema;
+  const schema = await importSchema(schemaPath, schemaExportName);
+  const target = resolveTarget(options.target);
+  const absoluteSchemaPath = path.resolve(schemaPath);
 
   const outputPath = options.output ?? deriveOutputPath(schemaPath, target.defaultExtension);
   const absoluteOutputPath = path.resolve(outputPath);
