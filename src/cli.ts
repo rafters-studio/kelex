@@ -105,6 +105,18 @@ async function runForm(schemaPath: string, options: FormCommandOptions): Promise
   });
 
   const outPath = options.out ?? deriveOutputPath(schemaPath, ".html");
+  // The CLI writes a file, so it needs text; a renderer that builds a tree (a
+  // React renderer, say) belongs in code that calls generateForm, not here.
+  if (typeof output !== "string") {
+    // The handler runs last, so with one named it may be the plugin that changed the type.
+    const source = settings.handler
+      ? `renderer "${settings.renderer}" with handler "${settings.handler}"`
+      : `renderer "${settings.renderer}"`;
+    const kind = output === null ? "null" : Array.isArray(output) ? "an array" : typeof output;
+    throw new Error(
+      `${source} produced ${kind}, not text; the CLI can only write output that is a string`,
+    );
+  }
   writeForm(outPath, output);
   console.log(`✓ Generated ${path.resolve(outPath)}`);
   console.log(`  renderer: ${settings.renderer} + ${settings.handler ?? "no handler (unwired)"}`);

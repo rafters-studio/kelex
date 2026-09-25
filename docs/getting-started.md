@@ -126,13 +126,13 @@ import { generateForm, writeForm } from "kelex";
 
 const schema = z.object({ email: z.email(), name: z.string().min(2) });
 
-const { output } = await generateForm(schema, {
+const { output } = await generateForm<string>(schema, {
   rendererOptions: { action: "/api/signup" },
 });
 writeForm("signup.html", output);
 ```
 
-Pass `{ config: "path.jsonc" }` to read a different settings file, or `{ settings }` to skip the file entirely.
+Pass `{ config: "path.jsonc" }` to read a different settings file, or `{ settings }` to skip the file entirely. The type argument names what your renderer produces: `string` for the HTML defaults, a tree type for a renderer that builds one. kelex takes it on trust, since plugins load at runtime, so name the type your plugins actually return.
 
 This path needs Node. It reads a file and resolves packages off disk.
 

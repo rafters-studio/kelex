@@ -84,7 +84,9 @@ On Node, `generateForm` does what the CLI does. It reads the settings file, reso
 ```typescript
 import { generateForm, writeForm } from "kelex";
 
-const { output } = await generateForm(schema, { rendererOptions: { action: "/api/signup" } });
+const { output } = await generateForm<string>(schema, {
+  rendererOptions: { action: "/api/signup" },
+});
 writeForm("signup.html", output);
 ```
 
