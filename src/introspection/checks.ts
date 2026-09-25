@@ -183,3 +183,59 @@ export function extractConstraints(schema: $ZodType, unknownChecks?: string[]): 
 
   return constraints;
 }
+
+// The range a sized-bigint format implies. z.int64()/z.uint64() carry it on
+// def.format with no check, so without this their range would vanish unnamed.
+const BIGINT_FORMAT_RANGES: Record<string, readonly [bigint, bigint]> = {
+  int64: [-(2n ** 63n), 2n ** 63n - 1n],
+  uint64: [0n, 2n ** 64n - 1n],
+};
+
+/** A check value as the author wrote it: `5n` for a bigint, JSON otherwise. */
+function showValue(value: unknown): string {
+  return typeof value === "bigint" ? `${value}n` : (JSON.stringify(value) ?? String(value));
+}
+
+/** One check in the author's terms, or its bare kind when it carries no value. */
+function describeCheck(def: Record<string, unknown>): string {
+  const kind = String(def.check);
+  const has = (key: string) => def[key] !== undefined;
+  switch (kind) {
+    case "greater_than":
+      return has("value") ? `${def.inclusive ? ">=" : ">"} ${showValue(def.value)}` : kind;
+    case "less_than":
+      return has("value") ? `${def.inclusive ? "<=" : "<"} ${showValue(def.value)}` : kind;
+    case "multiple_of":
+      return has("value") ? `multipleOf ${showValue(def.value)}` : kind;
+    case "min_size":
+      return has("minimum") ? `min size ${showValue(def.minimum)}` : kind;
+    case "max_size":
+      return has("maximum") ? `max size ${showValue(def.maximum)}` : kind;
+    case "size_equals":
+      return has("size") ? `size ${showValue(def.size)}` : kind;
+    case "mime_type":
+      return Array.isArray(def.mime) ? `mime ${def.mime.join(", ")}` : kind;
+    default:
+      return kind;
+  }
+}
+
+/**
+ * Describe the constraints on a schema kelex cannot represent, in the author's
+ * terms (`>= 5n`, `max size 10`, the implied range of `z.uint64()`), so each can
+ * be warned about rather than vanish under one type warning (#254). A refine,
+ * and the predicate of a `z.custom()` (which lives on the def, not in its
+ * checks), come back as `custom`, for the caller to report as a refine.
+ */
+export function describeChecks(schema: $ZodType): string[] {
+  const def = schema._zod.def as { type: string; format?: string; checks?: ZodCheck[] };
+  const out: string[] = [];
+  const range = def.type === "bigint" && def.format ? BIGINT_FORMAT_RANGES[def.format] : undefined;
+  if (range) out.push(`${def.format}: >= ${range[0]}n and <= ${range[1]}n`);
+  if (def.type === "custom") out.push("custom");
+  for (const check of Array.isArray(def.checks) ? def.checks : []) {
+    const checkDef = check._zod?.def as Record<string, unknown> | undefined;
+    if (checkDef) out.push(describeCheck(checkDef));
+  }
+  return out;
+}

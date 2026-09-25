@@ -1,0 +1,11 @@
+{
+  // Type-level tests: files under test/types are compiled, never run. Each one
+  // fails `pnpm typecheck` if the types it pins change.
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "noEmit": true,
+    "rootDir": "."
+  },
+  "include": ["test/types/**/*.ts"],
+  "exclude": ["node_modules", "dist"]
+}

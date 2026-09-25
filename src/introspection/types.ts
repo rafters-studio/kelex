@@ -241,11 +241,14 @@ export interface FormDescriptor {
   /** All fields in order */
   fields: FieldDescriptor[];
 
-  /** Import path for the schema */
-  schemaImportPath: string;
+  /**
+   * Import path for the schema. Present when the CLI generated the descriptor
+   * from a file; absent when a library caller passed a live schema without one.
+   */
+  schemaImportPath?: string;
 
-  /** Exported schema name */
-  schemaExportName: string;
+  /** Exported schema name. Present and absent under the same rule as the path. */
+  schemaExportName?: string;
 
   /**
    * Structured warnings from introspection. Each carries a `path`, a stable
