@@ -2,7 +2,8 @@ import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
-import { loadPlugin } from "../../src/settings";
+import { z } from "zod/v4";
+import { generateForm, loadPlugin } from "../../src/settings";
 import { exportTarget, factoryOf, resolvePlugin } from "../../src/settings/resolve-plugin";
 
 // A throwaway project with plugin packages installed under node_modules, built
@@ -90,6 +91,165 @@ describe("loadPlugin -- the package shapes a third-party plugin ships", () => {
     await expect(loadPlugin("not-a-factory", undefined, project)).rejects.toThrow(
       /must default-export a factory/,
     );
+  });
+});
+
+describe("loadPlugin -- a factory's result must fit the role it fills (#259)", () => {
+  const factoryReturning = (name: string, value: string) =>
+    installPackage(
+      name,
+      { type: "module", main: "./index.js" },
+      {
+        "index.js": `export default () => (${value});`,
+      },
+    );
+
+  it("names the package and the first missing renderer member", async () => {
+    factoryReturning("half-renderer", "{ inventory: [], compose: {} }");
+    await expect(loadPlugin("half-renderer", undefined, project, "renderer")).rejects.toThrow(
+      'plugin "half-renderer" returned a renderer without a function "form"; it is missing',
+    );
+  });
+
+  it("names a mistyped renderer member and what it got", async () => {
+    factoryReturning("bad-inventory", "{ inventory: {}, compose: {}, form() {}, fallback() {} }");
+    await expect(loadPlugin("bad-inventory", undefined, project, "renderer")).rejects.toThrow(
+      'plugin "bad-inventory" returned a renderer without an array "inventory"; got an object',
+    );
+  });
+
+  it("refuses a renderer factory that returns a function, not an object", async () => {
+    factoryReturning("fn-renderer", "() => {}");
+    await expect(loadPlugin("fn-renderer", undefined, project, "renderer")).rejects.toThrow(
+      'plugin "fn-renderer" returned a function, not a renderer object',
+    );
+  });
+
+  it("names a handler without wire", async () => {
+    factoryReturning("empty-handler", "{}");
+    await expect(loadPlugin("empty-handler", undefined, project, "handler")).rejects.toThrow(
+      'plugin "empty-handler" returned a handler without a function "wire"; it is missing',
+    );
+  });
+
+  it("fails in generateForm itself, before the engine runs", async () => {
+    factoryReturning("half-renderer", "{ inventory: [], compose: {} }");
+    const run = generateForm(z.object({ a: z.string() }), {
+      settings: { renderer: "half-renderer" },
+      from: project,
+    });
+    await expect(run).rejects.toThrow('plugin "half-renderer" returned a renderer without');
+  });
+
+  it("refuses a Map for compose, whose entries the engine cannot read by key", async () => {
+    factoryReturning(
+      "map-compose",
+      "{ inventory: [], compose: new Map(), form() {}, fallback() {} }",
+    );
+    await expect(loadPlugin("map-compose", undefined, project, "renderer")).rejects.toThrow(
+      'plugin "map-compose" returned a renderer without an object "compose"; got a Map',
+    );
+  });
+
+  it("names null and arrays as themselves, not as object", async () => {
+    factoryReturning("null-compose", "{ inventory: [], compose: null, form() {}, fallback() {} }");
+    await expect(loadPlugin("null-compose", undefined, project, "renderer")).rejects.toThrow(
+      'without an object "compose"; got null',
+    );
+    factoryReturning("array-compose", "{ inventory: [], compose: [], form() {}, fallback() {} }");
+    await expect(loadPlugin("array-compose", undefined, project, "renderer")).rejects.toThrow(
+      'without an object "compose"; got an array',
+    );
+  });
+
+  it("refuses a Promise or a WeakMap for compose, and says to await a Promise", async () => {
+    factoryReturning(
+      "promise-compose",
+      "{ inventory: [], compose: Promise.resolve({}), form() {}, fallback() {} }",
+    );
+    await expect(loadPlugin("promise-compose", undefined, project, "renderer")).rejects.toThrow(
+      'without an object "compose"; got a Promise (await it in the factory)',
+    );
+    factoryReturning(
+      "weak-compose",
+      "{ inventory: [], compose: new WeakMap(), form() {}, fallback() {} }",
+    );
+    await expect(loadPlugin("weak-compose", undefined, project, "renderer")).rejects.toThrow(
+      'without an object "compose"; got a WeakMap',
+    );
+  });
+
+  it("says undefined, not an undefined, when a factory returns nothing", async () => {
+    factoryReturning("empty-return", "undefined");
+    await expect(loadPlugin("empty-return", undefined, project, "renderer")).rejects.toThrow(
+      'plugin "empty-return" returned undefined, not a renderer object',
+    );
+  });
+
+  it("accepts compose as a class instance or a null-prototype object", async () => {
+    factoryReturning(
+      "class-compose",
+      "{ inventory: [], compose: new (class { field() {} })(), form() {}, fallback() {} }",
+    );
+    factoryReturning(
+      "bare-compose",
+      "{ inventory: [], compose: Object.create(null), form() {}, fallback() {} }",
+    );
+    for (const name of ["class-compose", "bare-compose"]) {
+      const renderer = await loadPlugin<{ compose: unknown }>(name, undefined, project, "renderer");
+      expect(typeof renderer.compose).toBe("object");
+    }
+  });
+
+  it("names the plugin when its factory throws or rejects", async () => {
+    installPackage(
+      "throwing",
+      { type: "module", main: "./index.js" },
+      {
+        "index.js": "export default () => { throw new Error('boom'); };",
+      },
+    );
+    installPackage(
+      "rejecting",
+      { type: "module", main: "./index.js" },
+      {
+        "index.js": "export default async () => { throw new Error('later boom'); };",
+      },
+    );
+    const sync = loadPlugin("throwing", undefined, project, "renderer");
+    await expect(sync).rejects.toThrow('plugin "throwing" factory failed: boom');
+    await expect(sync).rejects.toHaveProperty("cause");
+    await expect(loadPlugin("rejecting", undefined, project, "renderer")).rejects.toThrow(
+      'plugin "rejecting" factory failed: later boom',
+    );
+  });
+
+  it("awaits an async factory before checking what it returns", async () => {
+    installPackage(
+      "async-handler",
+      { type: "module", main: "./index.js" },
+      {
+        "index.js": "export default async () => ({ wire: (form) => form });",
+      },
+    );
+    const handler = await loadPlugin<{ wire: unknown }>(
+      "async-handler",
+      undefined,
+      project,
+      "handler",
+    );
+    expect(typeof handler.wire).toBe("function");
+  });
+
+  it("accepts a result with every member its role needs", async () => {
+    factoryReturning("ok-handler", "{ wire: (form) => form }");
+    const handler = await loadPlugin<{ wire: unknown }>(
+      "ok-handler",
+      undefined,
+      project,
+      "handler",
+    );
+    expect(typeof handler.wire).toBe("function");
   });
 });
 

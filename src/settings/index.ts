@@ -77,15 +77,88 @@ export function checkSettings(raw: Record<string, unknown>, configPath: string):
   return settings;
 }
 
+type MemberKind = "array" | "object" | "function";
+
+// The members each plugin role must have, checked in this order (#259).
+const PLUGIN_SHAPES = {
+  renderer: [
+    ["inventory", "array"],
+    ["compose", "object"],
+    ["form", "function"],
+    ["fallback", "function"],
+  ],
+  handler: [["wire", "function"]],
+} as const satisfies Record<string, readonly (readonly [string, MemberKind])[]>;
+
+export type PluginRole = keyof typeof PLUGIN_SHAPES;
+
+// An object the engine can read by key. The engine uses compose[name], so a
+// plain object or a class instance works, but a Map or Set holds its entries
+// where bracket access cannot see them and every field would fall back.
+const isKeyedObject = (value: unknown): boolean =>
+  typeof value === "object" &&
+  value !== null &&
+  !Array.isArray(value) &&
+  !(value instanceof Map) &&
+  !(value instanceof Set) &&
+  !(value instanceof WeakMap) &&
+  !(value instanceof WeakSet) &&
+  !isThenable(value);
+
+// A Promise (or any thenable) where an object belongs usually means a missed await.
+const isThenable = (value: object): boolean =>
+  typeof (value as { then?: unknown }).then === "function";
+
+const isKind = (value: unknown, kind: MemberKind): boolean =>
+  kind === "array"
+    ? Array.isArray(value)
+    : kind === "object"
+      ? isKeyedObject(value)
+      : typeof value === "function";
+
+/** What a value is, in words: null and arrays are named, not reported as "object". */
+const describe = (value: unknown): string => {
+  if (value === null) return "null";
+  if (Array.isArray(value)) return "an array";
+  if (value instanceof Map) return "a Map";
+  if (value instanceof Set) return "a Set";
+  if (value instanceof WeakMap) return "a WeakMap";
+  if (value instanceof WeakSet) return "a WeakSet";
+  if (value === undefined) return "undefined";
+  if (typeof value === "object" && isThenable(value)) return "a Promise (await it in the factory)";
+  const kind = typeof value;
+  return `${kind === "object" || kind === "undefined" ? "an" : "a"} ${kind}`;
+};
+
+/** What is wrong with a factory's result for its role, or undefined if nothing. */
+function shapeProblem(plugin: unknown, role: PluginRole): string | undefined {
+  if (typeof plugin !== "object" || plugin === null) {
+    return `returned ${describe(plugin)}, not a ${role} object`;
+  }
+  const members = plugin as Record<string, unknown>;
+  for (const [key, kind] of PLUGIN_SHAPES[role]) {
+    if (!isKind(members[key], kind)) {
+      const found = members[key] === undefined ? "it is missing" : `got ${describe(members[key])}`;
+      const wanted =
+        kind === "function" ? "a function" : kind === "array" ? "an array" : "an object";
+      return `returned a ${role} without ${wanted} "${key}"; ${found}`;
+    }
+  }
+  return undefined;
+}
+
 /**
  * The plugin load contract: resolve the named package from the PROJECT (where the
  * consumer installed it — the host depends on no particular plugin), import it,
- * and call its default-exported factory with the merged options.
+ * and call its default-exported factory with the merged options. Given a role,
+ * the factory's result is checked for that role's members, so a wrong shape
+ * fails here naming the package, not later inside the engine.
  */
 export async function loadPlugin<T>(
   pkg: string,
   options: Record<string, unknown> | undefined,
   from: string,
+  role?: PluginRole,
 ): Promise<T> {
   const url = resolvePlugin(pkg, from);
   let mod: { default?: unknown };
@@ -100,7 +173,17 @@ export async function loadPlugin<T>(
   if (typeof factory !== "function") {
     throw new Error(`plugin "${pkg}" must default-export a factory: (options) => plugin`);
   }
-  return (factory as PluginFactory<T>)(options);
+  // A factory may be async; await it so its result, not a Promise, is checked.
+  // A throw or rejection names the plugin, like every other load failure.
+  let plugin: unknown;
+  try {
+    plugin = await (factory as PluginFactory<unknown>)(options);
+  } catch (error) {
+    throw new Error(`plugin "${pkg}" factory failed: ${messageOf(error)}`, { cause: error });
+  }
+  const problem = role ? shapeProblem(plugin, role) : undefined;
+  if (problem) throw new Error(`plugin "${pkg}" ${problem}`);
+  return plugin as T;
 }
 
 /**
@@ -147,6 +230,7 @@ export async function generateForm<T = unknown>(
     settings.renderer,
     merge(settings["renderer.options"], options.rendererOptions),
     from,
+    "renderer",
   );
   // No handler named: the renderer's output is the form, unwired.
   const handler = settings.handler
@@ -154,6 +238,7 @@ export async function generateForm<T = unknown>(
         settings.handler,
         merge(settings["handler.options"], options.handlerOptions),
         from,
+        "handler",
       )
     : undefined;
 
