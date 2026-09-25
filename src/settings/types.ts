@@ -36,6 +36,9 @@ export interface GenerateOptions {
   rendererOptions?: Record<string, unknown>;
   /** Options merged over the settings' `handler.options` for this run. */
   handlerOptions?: Record<string, unknown>;
-  /** Directory to resolve the plugin packages from (default: `process.cwd()`). */
+  /**
+   * Directory to resolve the plugin packages from. Defaults to the directory of
+   * the settings file, or to `process.cwd()` when `settings` is passed directly.
+   */
   from?: string;
 }

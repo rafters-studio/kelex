@@ -100,6 +100,8 @@ async function runForm(schemaPath: string, options: FormCommandOptions): Promise
     settings,
     formName: deriveFormName(options.export),
     rendererOptions: options.action ? { action: options.action } : undefined,
+    // The CLI loads the settings itself, so it names where they came from.
+    from: path.dirname(path.resolve(options.config)),
   });
 
   const outPath = options.out ?? deriveOutputPath(schemaPath, ".html");

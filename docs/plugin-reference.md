@@ -18,7 +18,9 @@ type PluginFactory<T> = (options?: Record<string, unknown>) => T;
 
 The host reads the package name from `kelex.settings.jsonc`, resolves it from your project rather than from kelex, imports it, and calls the factory with the merged options. Settings options come first and per-run options override them.
 
-Resolution starts at the current working directory unless you pass `from`.
+Resolution starts at the directory that holds the settings file, so run the CLI from anywhere. When you pass `settings` as an object to `generateForm`, there is no file, so resolution starts at the current working directory. Pass `from` to choose the directory yourself.
+
+A plugin can ship as ESM or CommonJS. kelex honors an `exports` map's `import`, `node`, `default`, and `require` conditions, falls back to `main`, and accepts a TypeScript-compiled CommonJS default export (`exports.default = factory`).
 
 ## Settings keys
 

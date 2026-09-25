@@ -31,6 +31,16 @@ describe("loadSettings", () => {
     expect(loaded.handler).toBe("@kelex/plugin-handler-post");
   });
 
+  it("reads a file saved with a UTF-8 byte-order mark", () => {
+    const p = settingsFile(`﻿{ "renderer": "r", "handler": "h" }`);
+    expect(loadSettings(p).renderer).toBe("r");
+  });
+
+  it("names the first parse error and where it is", () => {
+    const p = settingsFile(`{\n  "renderer": "r"\n  "handler": "h"\n}`);
+    expect(() => loadSettings(p)).toThrow(/CommaExpected at line 3, column 3/);
+  });
+
   it("rejects settings missing a plugin", () => {
     const p = settingsFile(`{ "renderer": "@kelex/plugin-renderer-html" }`);
     expect(() => loadSettings(p)).toThrow(/renderer.*handler.*required/);
