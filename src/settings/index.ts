@@ -103,11 +103,12 @@ const isKeyedObject = (value: unknown): boolean =>
   !(value instanceof Set) &&
   !(value instanceof WeakMap) &&
   !(value instanceof WeakSet) &&
-  !isThenable(value);
+  !isPromise(value);
 
-// A Promise (or any thenable) where an object belongs usually means a missed await.
-const isThenable = (value: object): boolean =>
-  typeof (value as { then?: unknown }).then === "function";
+// A Promise where an object belongs usually means a missed await. Checked by
+// instanceof, not by a "then" key: compose is keyed by component names, and a
+// composer may legitimately be called "then".
+const isPromise = (value: object): boolean => value instanceof Promise;
 
 const isKind = (value: unknown, kind: MemberKind): boolean =>
   kind === "array"
@@ -125,9 +126,9 @@ const describe = (value: unknown): string => {
   if (value instanceof WeakMap) return "a WeakMap";
   if (value instanceof WeakSet) return "a WeakSet";
   if (value === undefined) return "undefined";
-  if (typeof value === "object" && isThenable(value)) return "a Promise (await it in the factory)";
+  if (typeof value === "object" && isPromise(value)) return "a Promise (await it in the factory)";
   const kind = typeof value;
-  return `${kind === "object" || kind === "undefined" ? "an" : "a"} ${kind}`;
+  return `${kind === "object" ? "an" : "a"} ${kind}`;
 };
 
 /** What is wrong with a factory's result for its role, or undefined if nothing. */
