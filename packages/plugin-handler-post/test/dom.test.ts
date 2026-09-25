@@ -124,6 +124,18 @@ describe("postHandler -- async POST, native client validation, routing (#227)", 
     expect(form.querySelector('[name="name"]')?.getAttribute("aria-invalid")).toBe("true");
   });
 
+  it("re-indexes a row whose key needs the _u escape the same way the renderer encodes it (#258)", () => {
+    // Drift guard for the escape the runtime and renderer each implement: a key
+    // with a space and an accented letter goes through the _u<hex>_ branch.
+    const key = "\u00e9 tags";
+    const form = mount({ [key]: z.array(z.object({ label: z.string() })) });
+    (form.querySelector("[data-add-row]") as HTMLButtonElement).click();
+    const row0 = form.querySelector(`[name="${key}.0.label"]`) as HTMLInputElement;
+    expect(row0.id).toBe(pathToId(`${key}.0.label`));
+    expect(row0.id).toContain("_ue9_");
+    expect(row0.getAttribute("aria-describedby")).toBe(`${pathToId(`${key}.0.label`)}-error`);
+  });
+
   it("adds/removes array rows and routes an array-row issue to the * template slot", async () => {
     const form = mount({ tags: z.array(z.object({ label: z.string() })) });
     const add = form.querySelector("[data-add-row]") as HTMLButtonElement;

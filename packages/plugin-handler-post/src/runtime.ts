@@ -33,6 +33,7 @@ export const RUNTIME = `(function () {
   function init(form) {
   // Mirrors kelex pathToId -- injective escape so a re-indexed row id stays unique.
   function pathToId(p) {
+    if (p === "") return "_e";
     return p.replace(/[^A-Za-z0-9]/gu, function (c) {
       if (c === "_") return "__";
       if (c === ".") return "_d";

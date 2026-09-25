@@ -24,7 +24,7 @@ describe("pathToId -- injective, valid HTML id (#226)", () => {
 
   it("stays [A-Za-z0-9_] and injective for any character, not just . * - _ (#258)", () => {
     const alphabet = [..."aZ09_.*-\"'<> =&/\\:;`é", "😀", "\u0000"];
-    const paths = new Set<string>();
+    const paths = new Set<string>([""]);
     // Every string of up to three characters from the alphabet.
     for (const a of ["", ...alphabet]) {
       for (const b of ["", ...alphabet]) {
