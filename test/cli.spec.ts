@@ -158,10 +158,10 @@ describe("CLI", () => {
         "-o",
         outputPath,
         "-H",
-        "@kelex/no-such-handler",
+        "no-such-kelex-handler",
       ]);
 
-      expect(stderr).toContain('cannot resolve plugin "@kelex/no-such-handler"');
+      expect(stderr).toContain('cannot resolve plugin "no-such-kelex-handler"');
       expect(fs.existsSync(outputPath)).toBe(false);
     });
 

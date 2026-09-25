@@ -198,7 +198,7 @@ for (const b of route(controls, issues)) {
 
 `route` matches a runtime path like `tags.2.label` to a template key like `tags.*.label`, and hands back anything that bound to nothing so you can show it rather than swallow it.
 
-Note that `route` is a real import, not a type. A handler that uses it needs `kelex` at runtime, unlike a renderer that only imports types.
+Note that `route` is a real import, not a type. A handler that uses it needs `@rafters/kelex` at runtime, unlike a renderer that only imports types.
 
 ## Prove it
 

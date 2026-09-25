@@ -174,7 +174,7 @@ Field order is preserved. Anything the reader cannot represent is reported as a 
 
 | package                                                           | what it is                                          |
 | ----------------------------------------------------------------- | --------------------------------------------------- |
-| `kelex`                                                           | the host: introspection, engine, settings, CLI      |
+| `@rafters/kelex`                                                  | the host: introspection, engine, settings, CLI      |
 | [`@rafters/kelex-renderer-html`](./docs/plugins/renderer-html.md) | default renderer, classless HTML, zero dependencies |
 | [`@rafters/kelex-handler-post`](./docs/plugins/handler-post.md)   | default handler, async POST, no framework           |
 

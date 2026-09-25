@@ -17,6 +17,7 @@ const manifestOf = (tarball: string): Record<string, unknown> =>
 
 beforeAll(() => {
   out = mkdtempSync(join(tmpdir(), "kelex-pack-"));
+  execFileSync("pnpm", ["pack", "--pack-destination", out], { cwd: ROOT, stdio: "pipe" });
   for (const name of PLUGINS) {
     execFileSync("pnpm", ["--filter", name, "pack", "--pack-destination", out], {
       cwd: ROOT,
@@ -28,16 +29,23 @@ afterAll(() => {
   rmSync(out, { recursive: true, force: true });
 });
 
-describe("packed plugins, as the release publishes them", () => {
+describe("packed packages, as the release publishes them", () => {
   it("name their tarballs the way the publish step expects", () => {
     expect(readdirSync(out).sort()).toEqual([
+      `rafters-kelex-${pkg.version}.tgz`,
       `rafters-kelex-handler-post-${pkg.version}.tgz`,
       `rafters-kelex-renderer-html-${pkg.version}.tgz`,
     ]);
   });
 
-  it("carry a real version range on their @rafters/kelex peer, not workspace:", () => {
-    for (const file of readdirSync(out)) {
+  it("publish the core as @rafters/kelex with the kelex command", () => {
+    const core = manifestOf(join(out, `rafters-kelex-${pkg.version}.tgz`));
+    expect(core.name).toBe("@rafters/kelex");
+    expect(core.bin).toEqual({ kelex: "./dist/cli.js" });
+  });
+
+  it("carry a real version range on the plugins' @rafters/kelex peer, not workspace:", () => {
+    for (const file of readdirSync(out).filter((f) => f !== `rafters-kelex-${pkg.version}.tgz`)) {
       const peers = manifestOf(join(out, file)).peerDependencies as Record<string, string>;
       expect(peers["@rafters/kelex"], file).toBe(`^${pkg.version}`);
     }
