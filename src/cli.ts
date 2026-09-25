@@ -108,7 +108,6 @@ async function runForm(schemaPath: string, options: FormCommandOptions): Promise
     settings,
     formName: deriveFormName(options.export),
     rendererOptions: options.action ? { action: options.action } : undefined,
-    from: process.cwd(),
   });
 
   const outPath = options.out ?? deriveOutputPath(schemaPath, ".html");

@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { renderForm, validateRenderer } from "../../src/engine";
+import { controlPaths } from "../../src/engine/paths";
 import type { FieldConstraints, FieldType } from "../../src/introspection";
 import { introspect } from "../../src/introspection";
 import { postHandler } from "@kelex/plugin-handler-post";
@@ -656,7 +657,7 @@ describe("Form pipeline: default renderer + handler over real schemas", () => {
         expect(html).not.toContain("kelex: no leaf control");
       });
 
-      it("stamps every top-level control name -- path-preservation on a real schema", () => {
+      it("stamps every control path -- path-preservation on a real schema", () => {
         const descriptor = introspect(
           testCase.schema as Parameters<typeof introspect>[0],
           INTROSPECT_OPTS,
@@ -664,11 +665,9 @@ describe("Form pipeline: default renderer + handler over real schemas", () => {
         // Render without the handler so the extracted names are the form's own.
         const html = renderForm(descriptor, htmlRenderer);
         const stamped = new Set(namesOf(html));
-        const containers = new Set(["object", "array", "union", "record", "tuple"]);
-        const missing = testCase.expectedFields
-          .filter((f) => !containers.has(f.type))
-          .map((f) => f.name)
-          .filter((name) => !stamped.has(name));
+        const missing = controlPaths(descriptor)
+          .map((c) => c.key)
+          .filter((key) => !stamped.has(key));
         expect(missing, `unstamped controls: ${missing.join(", ")}`).toEqual([]);
       });
     });
