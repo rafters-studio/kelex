@@ -16,8 +16,6 @@ jobs:
 
       - name: Setup pnpm
         uses: pnpm/action-setup@v4
-        with:
-          version: 11.13.0
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
@@ -27,6 +25,9 @@ jobs:
 
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
+
+      - name: Toolchain drift
+        run: pnpm exec toolchain drift
 
       - name: Lint (oxlint)
         run: pnpm lint
