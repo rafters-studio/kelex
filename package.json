@@ -72,7 +72,7 @@
   "devDependencies": {
     "@rafters/kelex-handler-post": "workspace:*",
     "@rafters/kelex-renderer-html": "workspace:*",
-    "@rafters/toolchain": "0.1.1",
+    "@rafters/toolchain": "catalog:",
     "@types/node": "catalog:",
     "happy-dom": "^20.11.1",
     "lefthook": "^2.0.15",
