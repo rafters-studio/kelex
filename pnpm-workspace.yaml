@@ -4,3 +4,21 @@ packages:
 allowBuilds:
   lefthook: true
   rolldown: false
+
+configDependencies:
+  "@rafters/toolchain": 0.1.1
+
+# The default catalog comes from @rafters/toolchain (.pnpmfile.mjs). This named
+# catalog keeps the published zod peer range at ^4.0.0: the toolchain's ^4.6.5
+# is a dev version, and narrowing what users may install is a product change.
+catalogs:
+  peer:
+    zod: ^4.0.0
+
+minimumReleaseAgeExclude:
+  - "@rafters/toolchain@0.1.1"
+
+# The root devDepends on both plugins for its integration specs, and both plugins
+# depend on the root, so the workspace has a cycle. pnpm 11 warned and ran the
+# tasks anyway; pnpm 12 refuses unless told to.
+ignoreWorkspaceCycles: true

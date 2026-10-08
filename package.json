@@ -72,20 +72,22 @@
   "devDependencies": {
     "@rafters/kelex-handler-post": "workspace:*",
     "@rafters/kelex-renderer-html": "workspace:*",
-    "@types/node": "^25.0.9",
+    "@rafters/toolchain": "0.1.1",
+    "@types/node": "catalog:",
     "happy-dom": "^20.11.1",
     "lefthook": "^2.0.15",
     "oxfmt": "^0.59.0",
     "oxlint": "^1.74.0",
     "tsdown": "^0.22.7",
-    "typescript": "^7.0.2",
+    "typescript": "catalog:",
     "vitest": "^4.1.10",
-    "zod": "^4.4.3"
+    "zod": "catalog:"
   },
   "peerDependencies": {
-    "zod": "^4.0.0"
+    "zod": "catalog:peer"
   },
   "engines": {
     "node": ">=24"
-  }
+  },
+  "packageManager": "pnpm@12.9.1"
 }

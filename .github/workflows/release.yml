@@ -24,8 +24,6 @@ jobs:
 
       - name: Setup pnpm
         uses: pnpm/action-setup@v4
-        with:
-          version: 11.13.0
 
       # node-version 24 resolves to the latest 24.x, whose npm is well above 11.5.1,
       # the first to publish over OIDC trusted publishing.
